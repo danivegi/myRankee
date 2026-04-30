@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "c:\\Users\\Dani_\\OneDrive\\Escritorio\\MyRankee\\myrankee_proyect\\src\\app\\api\\reviews\\[id]"
+    ],
+    "allow": [
+      "Bash(npm install *)"
+    ]
+  }
+}

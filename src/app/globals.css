@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 @theme inline {
@@ -12,15 +12,281 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ── Page fade-in ──────────────────────────────────────────────────────────── */
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-in {
+  animation: page-fade-in 0.25s ease-out;
+}
+
+/* ── Toast slide animations ────────────────────────────────────────────────── */
+
+@keyframes toast-in {
+  from {
+    transform: translateX(110%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toast-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(110%);
+    opacity: 0;
+  }
+}
+
+/* ── Legendario achievement pulse ──────────────────────────────────────────── */
+
+@keyframes legendario-pulse {
+  0%, 100% {
+    box-shadow: 0 0 12px #FF6B9D50, 0 0 4px #FF6B9D30;
+    border-color: #FF6B9Daa;
+  }
+  50% {
+    box-shadow: 0 0 32px #FF6B9D90, 0 0 12px #FF6B9D50;
+    border-color: #FF6B9D;
+  }
+}
+
+/* ── Shimmer skeleton ──────────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #1a1a1a 25%, #282828 50%, #1a1a1a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* ── Star pop on select ────────────────────────────────────────────────────── */
+
+@keyframes star-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.4); }
+  70%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+.star-pop {
+  animation: star-pop 0.28s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* ── Heart like burst ──────────────────────────────────────────────────────── */
+
+@keyframes heart-burst {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.5); }
+  65%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.heart-burst {
+  animation: heart-burst 0.42s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes heart-ring {
+  0%   { transform: scale(1);   opacity: 0.7; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+.heart-ring {
+  animation: heart-ring 0.5s ease-out forwards;
+}
+
+/* ── Bell shake ────────────────────────────────────────────────────────────── */
+
+@keyframes bell-shake {
+  0%,100% { transform: rotate(0deg); }
+  15%     { transform: rotate(-14deg); }
+  35%     { transform: rotate(14deg); }
+  55%     { transform: rotate(-9deg); }
+  75%     { transform: rotate(9deg); }
+  90%     { transform: rotate(-4deg); }
+}
+.bell-shake {
+  animation: bell-shake 0.55s ease-in-out both;
+  transform-origin: top center;
+}
+
+/* ── Badge pop ─────────────────────────────────────────────────────────────── */
+
+@keyframes badge-pop {
+  0%   { transform: scale(0); }
+  65%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+.badge-pop {
+  animation: badge-pop 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* ── Modal scale in ────────────────────────────────────────────────────────── */
+
+@keyframes modal-scale-in {
+  from { transform: scale(0.94); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+.modal-scale-in {
+  animation: modal-scale-in 0.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes backdrop-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.backdrop-fade-in {
+  animation: backdrop-fade-in 0.18s ease-out both;
+}
+
+/* ── Achievement overlay in ────────────────────────────────────────────────── */
+
+@keyframes achievement-card-in {
+  0%   { transform: scale(0.65) translateY(20px); opacity: 0; }
+  60%  { transform: scale(1.04) translateY(-4px); opacity: 1; }
+  100% { transform: scale(1)    translateY(0);    opacity: 1; }
+}
+.achievement-card-in {
+  animation: achievement-card-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* ── Feed card stagger ─────────────────────────────────────────────────────── */
+
+@keyframes card-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.card-fade-up {
+  animation: card-fade-up 0.35s ease-out both;
+}
+
+/* ── Tab content fade ──────────────────────────────────────────────────────── */
+
+@keyframes tab-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.tab-content {
+  animation: tab-fade-in 0.2s ease-out both;
+}
+
+/* ── Card hover lift ───────────────────────────────────────────────────────── */
+
+.card-hover {
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+}
+.card-hover-list {
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+.card-hover-list:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.28),
+              0 12px 36px rgba(168, 85, 247, 0.12);
+}
+
+/* ── Button press scale ────────────────────────────────────────────────────── */
+
+button:active:not(:disabled),
+[role="button"]:active:not([aria-disabled="true"]) {
+  transform: scale(0.97);
+}
+
+/* ── Primary button glow ───────────────────────────────────────────────────── */
+
+.btn-primary {
+  transition: background-color 200ms, box-shadow 200ms, transform 150ms;
+}
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 0 22px rgba(168, 85, 247, 0.45);
+}
+
+/* ── Input focus glow ──────────────────────────────────────────────────────── */
+
+.input-focus {
+  transition: border-color 200ms, box-shadow 200ms;
+}
+.input-focus:focus {
+  border-color: #A855F7;
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.15);
+  outline: none;
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .star-pop,
+  .heart-burst,
+  .heart-ring,
+  .bell-shake,
+  .badge-pop,
+  .modal-scale-in,
+  .achievement-card-in,
+  .card-fade-up,
+  .tab-content,
+  .skeleton-shimmer {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .card-hover,
+  .card-hover-list,
+  .btn-primary {
+    transition: color 150ms, background-color 150ms, border-color 150ms !important;
+    will-change: auto !important;
+  }
+  button:active:not(:disabled) {
+    transform: none !important;
+  }
+}
+
+/* ── Scrollbar styling ─────────────────────────────────────────────────────── */
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 2px;
 }
