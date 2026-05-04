@@ -100,7 +100,487 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-const TABS = ['Reseñas', 'Juegos', 'Listas', 'Favoritos', 'Estadísticas', 'Logros', 'Diario'];
+const TABS = ['Reseñas', 'Juegos', 'Listas', 'Backlog', 'Favoritos', 'Estadísticas', 'Logros', 'Diario'];
+
+// ── Backlog tab ───────────────────────────────────────────────────────────────
+
+const BACKLOG_STATUS_TABS = [
+  { key: 'pendiente', label: 'Pendiente', color: '#A855F7' },
+  { key: 'jugando',   label: 'Jugando',   color: '#3B82F6' },
+  { key: 'jugado',    label: 'Jugado',    color: '#10B981' },
+];
+
+const SORT_OPTIONS = [
+  { key: 'recent', label: 'Recientes' },
+  { key: 'old',    label: 'Antiguos'  },
+  { key: 'az',     label: 'A-Z'       },
+  { key: 'za',     label: 'Z-A'       },
+  { key: 'year',   label: 'Año del juego' },
+];
+
+const STATUS_COLORS = { pendiente: '#A855F7', jugando: '#3B82F6', jugado: '#10B981' };
+
+function IconGrid({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+    </svg>
+  );
+}
+
+function IconList({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+      <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+    </svg>
+  );
+}
+
+function IconTrash({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+      <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+    </svg>
+  );
+}
+
+function BacklogGridCard({ item, isOwner, onStatusChange, onRemove }) {
+  const [hovering,  setHovering]  = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [changing,  setChanging]  = useState(false);
+
+  async function doStatusChange(newStatus) {
+    setChanging(true);
+    await onStatusChange(item.igdb_game_id, newStatus);
+    setChanging(false);
+    setHovering(false);
+  }
+
+  function handleMouseLeave() {
+    setHovering(false);
+    setConfirming(false);
+  }
+
+  const otherStatuses = BACKLOG_STATUS_TABS.filter((s) => s.key !== item.status);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div
+        className="relative rounded-lg overflow-hidden bg-[#141414] cursor-pointer"
+        style={{ aspectRatio: '3/4' }}
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={handleMouseLeave}
+      >
+        <Link href={`/game/${item.igdb_game_id}`} className="absolute inset-0 block">
+          {item.game.cover ? (
+            <Image src={item.game.cover} alt={item.game.name ?? ''} fill sizes="(max-width: 768px) 33vw, 200px" className="object-cover" />
+          ) : (
+            <div className="w-full h-full bg-[#1A1A1A] flex items-center justify-center">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="6" width="20" height="12" rx="2"/>
+                <path d="M9.5 9.5v5M7 12h5M17 12h.01"/>
+              </svg>
+            </div>
+          )}
+        </Link>
+
+        {/* Owner overlay */}
+        {isOwner && (
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 z-10 transition-opacity duration-150"
+            style={{
+              backgroundColor: 'rgba(0,0,0,0.82)',
+              opacity: hovering ? 1 : 0,
+              pointerEvents: hovering ? 'auto' : 'none',
+            }}
+          >
+            {changing ? (
+              <div className="w-5 h-5 rounded-full border-2 border-[#A855F7] border-t-transparent animate-spin" />
+            ) : confirming ? (
+              <div className="flex flex-col gap-2 w-full">
+                <p className="text-white text-[11px] text-center font-mono">¿Quitar del backlog?</p>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setConfirming(false)}
+                    className="flex-1 py-1.5 rounded text-[11px] text-[#71717A] border border-[#3F3F46] hover:text-white transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => onRemove(item.igdb_game_id)}
+                    className="flex-1 py-1.5 rounded text-[11px] text-red-400 border border-red-500/50 hover:bg-red-500/10 transition-colors cursor-pointer"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col gap-1.5 w-full">
+                  {otherStatuses.map((s) => (
+                    <button
+                      key={s.key}
+                      onClick={() => doStatusChange(s.key)}
+                      className="w-full py-1.5 rounded text-[11px] font-mono text-white transition-colors cursor-pointer hover:brightness-110"
+                      style={{ backgroundColor: `${s.color}28`, border: `1px solid ${s.color}55` }}
+                    >
+                      → {s.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setConfirming(true)}
+                  className="flex items-center gap-1 text-[#71717A] hover:text-red-400 text-[11px] transition-colors cursor-pointer mt-1"
+                >
+                  <IconTrash size={12} />
+                  Quitar
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      <Link href={`/game/${item.igdb_game_id}`} className="flex flex-col gap-0.5">
+        <span className={`${inter.className} text-white text-[12px] font-semibold leading-snug line-clamp-2 hover:text-[#A855F7] transition-colors`}>
+          {item.game.name ?? `#${item.igdb_game_id}`}
+        </span>
+        {item.game.year && (
+          <span className="text-[#71717A] text-[11px] font-mono">{item.game.year}</span>
+        )}
+      </Link>
+    </div>
+  );
+}
+
+function BacklogListRow({ item, isOwner, onStatusChange, onRemove }) {
+  const [confirming, setConfirming] = useState(false);
+  const [changing,   setChanging]   = useState(false);
+
+  async function doStatusChange(e) {
+    const newStatus = e.target.value;
+    if (newStatus === item.status) return;
+    setChanging(true);
+    await onStatusChange(item.igdb_game_id, newStatus);
+    setChanging(false);
+  }
+
+  const color = STATUS_COLORS[item.status] ?? '#A855F7';
+
+  return (
+    <div className="flex items-center gap-4 py-3.5 border-b border-[#1A1A1A] group">
+      <Link href={`/game/${item.igdb_game_id}`} className="flex-shrink-0">
+        <div className="relative w-12 h-16 rounded overflow-hidden bg-[#141414]">
+          {item.game.cover ? (
+            <Image src={item.game.cover} alt={item.game.name ?? ''} fill sizes="48px" className="object-cover" />
+          ) : (
+            <div className="w-full h-full bg-[#1A1A1A]" />
+          )}
+        </div>
+      </Link>
+
+      <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+        <Link href={`/game/${item.igdb_game_id}`} className="text-white text-sm font-semibold hover:text-[#A855F7] transition-colors line-clamp-1">
+          {item.game.name ?? `#${item.igdb_game_id}`}
+        </Link>
+        <span className="text-[#71717A] text-[11px] font-mono">{item.game.year ?? '—'}</span>
+      </div>
+
+      <span
+        className="text-[10px] font-mono px-2 py-0.5 rounded-full flex-shrink-0"
+        style={{ color, backgroundColor: `${color}18`, border: `1px solid ${color}40` }}
+      >
+        {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+      </span>
+
+      <span className="text-[#3F3F46] text-[11px] font-mono flex-shrink-0 hidden sm:block">
+        {new Date(item.added_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+      </span>
+
+      {isOwner && (
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {changing ? (
+            <div className="w-4 h-4 rounded-full border-2 border-[#A855F7] border-t-transparent animate-spin" />
+          ) : (
+            <select
+              value={item.status}
+              onChange={doStatusChange}
+              className="bg-[#111111] border border-[#1A1A1A] text-[#71717A] text-[11px] rounded px-2 py-1 cursor-pointer focus:outline-none focus:border-[#A855F7] hover:border-[#3F3F46] transition-colors"
+            >
+              {BACKLOG_STATUS_TABS.map((s) => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </select>
+          )}
+
+          {confirming ? (
+            <div className="flex items-center gap-1">
+              <button onClick={() => setConfirming(false)} className="text-[#71717A] text-[11px] hover:text-white cursor-pointer transition-colors">
+                Cancelar
+              </button>
+              <button onClick={() => { onRemove(item.igdb_game_id); setConfirming(false); }} className="text-red-400 text-[11px] hover:text-red-300 cursor-pointer transition-colors">
+                Eliminar
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirming(true)} className="text-[#3F3F46] hover:text-red-400 transition-colors cursor-pointer" title="Quitar del backlog">
+              <IconTrash size={14} />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BacklogTab({ username, isOwner, token }) {
+  const [items,        setItems]        = useState([]);
+  const [counts,       setCounts]       = useState({ jugado: 0, jugando: 0, pendiente: 0 });
+  const [activeStatus, setActiveStatus] = useState('pendiente');
+  const [sort,         setSort]         = useState('recent');
+  const [viewMode,     setViewMode]     = useState('grid');
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(false);
+    fetch(`/api/users/${username}/backlog`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => { setItems(data.items); setCounts(data.counts); })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [username]);
+
+  const filtered = items.filter((item) => item.status === activeStatus);
+
+  const sorted = [...filtered].sort((a, b) => {
+    switch (sort) {
+      case 'recent': return new Date(b.added_at) - new Date(a.added_at);
+      case 'old':    return new Date(a.added_at) - new Date(b.added_at);
+      case 'az':     return (a.game.name ?? '').localeCompare(b.game.name ?? '', 'es');
+      case 'za':     return (b.game.name ?? '').localeCompare(a.game.name ?? '', 'es');
+      case 'year':   return (b.game.year ?? 0) - (a.game.year ?? 0);
+      default:       return 0;
+    }
+  });
+
+  async function handleStatusChange(igdbId, newStatus) {
+    const t = token ?? localStorage.getItem('token');
+    if (!t) return;
+    const res = await fetch('/api/backlog', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+      body: JSON.stringify({ igdb_game_id: igdbId, status: newStatus }),
+    });
+    if (!res.ok) return;
+    setItems((prev) => {
+      const old = prev.find((i) => i.igdb_game_id === igdbId);
+      if (!old) return prev;
+      setCounts((c) => ({
+        ...c,
+        [old.status]: Math.max(0, c[old.status] - 1),
+        [newStatus]:  (c[newStatus] ?? 0) + 1,
+      }));
+      return prev.map((i) => i.igdb_game_id === igdbId ? { ...i, status: newStatus } : i);
+    });
+  }
+
+  async function handleRemove(igdbId) {
+    const t = token ?? localStorage.getItem('token');
+    if (!t) return;
+    await fetch('/api/backlog', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+      body: JSON.stringify({ igdb_game_id: igdbId }),
+    });
+    setItems((prev) => {
+      const old = prev.find((i) => i.igdb_game_id === igdbId);
+      if (old) setCounts((c) => ({ ...c, [old.status]: Math.max(0, c[old.status] - 1) }));
+      return prev.filter((i) => i.igdb_game_id !== igdbId);
+    });
+  }
+
+  const EMPTY_MESSAGES = {
+    pendiente: { text: 'No tienes juegos pendientes.', sub: '¡Explora juegos para añadir!' },
+    jugando:   { text: 'No estás jugando ningún juego ahora mismo', sub: null },
+    jugado:    { text: 'Aún no has marcado ningún juego como jugado', sub: null },
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-4 pb-10">
+        <div className="flex gap-4">
+          {[0,1,2].map((i) => <div key={i} className="skeleton-shimmer h-9 w-28 rounded-full" />)}
+        </div>
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="flex flex-col gap-2">
+              <div className="skeleton-shimmer rounded-lg" style={{ aspectRatio: '3/4' }} />
+              <div className="skeleton-shimmer h-3 w-3/4 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-20 text-center">
+        <p className="text-[#71717A] text-sm">No se pudo cargar el backlog.</p>
+        <button
+          onClick={() => { setError(false); setLoading(true); fetch(`/api/users/${username}/backlog`).then((r) => r.ok ? r.json() : Promise.reject()).then((d) => { setItems(d.items); setCounts(d.counts); }).catch(() => setError(true)).finally(() => setLoading(false)); }}
+          className="px-4 py-2 rounded-full border border-[#1A1A1A] text-[#71717A] text-sm hover:text-white hover:border-[#3F3F46] transition-colors cursor-pointer"
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  const totalBacklog = counts.jugado + counts.jugando + counts.pendiente;
+
+  if (totalBacklog === 0) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-20 text-center pb-10">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="6" width="20" height="12" rx="2"/>
+          <path d="M9.5 9.5v5M7 12h5M17 12h.01"/>
+        </svg>
+        <div className="flex flex-col gap-1">
+          <p className="text-white text-sm font-medium">
+            {isOwner ? 'Tu backlog está vacío' : 'Este usuario no tiene backlog todavía'}
+          </p>
+          {isOwner && (
+            <p className="text-[#71717A] text-sm">
+              <Link href="/search" className="text-[#A855F7] hover:underline">Explora juegos</Link>
+              {' '}para añadirlos a tu backlog
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-5 pb-10">
+
+      {/* ── Status sub-tabs ── */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {BACKLOG_STATUS_TABS.map((s) => {
+          const active = activeStatus === s.key;
+          return (
+            <button
+              key={s.key}
+              onClick={() => setActiveStatus(s.key)}
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-mono transition-all cursor-pointer"
+              style={active ? {
+                backgroundColor: `${s.color}20`,
+                border: `1px solid ${s.color}60`,
+                color: s.color,
+              } : {
+                backgroundColor: 'transparent',
+                border: '1px solid #1A1A1A',
+                color: '#71717A',
+              }}
+            >
+              {s.label}
+              <span
+                className="text-[11px] px-1.5 py-0.5 rounded-full font-bold"
+                style={active
+                  ? { backgroundColor: `${s.color}30`, color: s.color }
+                  : { backgroundColor: '#1A1A1A', color: '#3F3F46' }
+                }
+              >
+                {counts[s.key]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Filters bar ── */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[#71717A] text-xs font-mono">Ordenar:</span>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            className="bg-[#111111] border border-[#1A1A1A] text-white text-xs rounded-lg px-3 py-1.5 cursor-pointer focus:outline-none focus:border-[#A855F7] hover:border-[#3F3F46] transition-colors"
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.key} value={o.key}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-1 ml-auto border border-[#1A1A1A] rounded-lg p-0.5">
+          {(['grid', 'list']).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className="p-1.5 rounded transition-colors cursor-pointer"
+              style={viewMode === mode
+                ? { backgroundColor: '#A855F7', color: '#0A0A0A' }
+                : { color: '#71717A' }
+              }
+              title={mode === 'grid' ? 'Vista cuadrícula' : 'Vista lista'}
+            >
+              {mode === 'grid' ? <IconGrid size={15} /> : <IconList size={15} />}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Content ── */}
+      {sorted.length === 0 ? (
+        <div className="flex flex-col items-center gap-4 py-16 text-center">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="6" width="20" height="12" rx="2"/>
+            <path d="M9.5 9.5v5M7 12h5M17 12h.01"/>
+          </svg>
+          <div className="flex flex-col gap-1">
+            <p className="text-white text-sm font-medium">{EMPTY_MESSAGES[activeStatus]?.text}</p>
+            {EMPTY_MESSAGES[activeStatus]?.sub && (
+              <p className="text-[#71717A] text-sm">{EMPTY_MESSAGES[activeStatus].sub}</p>
+            )}
+            <Link href="/search" className="text-[#A855F7] text-sm hover:underline mt-1">
+              Explorar juegos
+            </Link>
+          </div>
+        </div>
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+          {sorted.map((item) => (
+            <BacklogGridCard
+              key={item.igdb_game_id}
+              item={item}
+              isOwner={isOwner}
+              onStatusChange={handleStatusChange}
+              onRemove={handleRemove}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          {sorted.map((item) => (
+            <BacklogListRow
+              key={item.igdb_game_id}
+              item={item}
+              isOwner={isOwner}
+              onStatusChange={handleStatusChange}
+              onRemove={handleRemove}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Achievement constants ─────────────────────────────────────────────────────
 
@@ -1041,7 +1521,7 @@ export default function UserProfilePage({ params }) {
   const stats = [
     { value: profile.total_ratings,   label: 'Juegos',     onClick: null },
     { value: profile.total_reviews,   label: 'Reseñas',    onClick: null },
-    { value: profile.total_backlog,   label: 'Backlog',    onClick: null },
+    { value: profile.total_backlog,   label: 'Backlog',    onClick: () => setActiveTab('Backlog') },
     { value: followersCount,          label: 'Seguidores', onClick: () => openModal('followers') },
     { value: profile.total_following, label: 'Siguiendo',  onClick: () => openModal('following') },
   ];
@@ -1276,6 +1756,13 @@ export default function UserProfilePage({ params }) {
             </svg>
             <p className="text-white text-sm font-medium">Próximamente</p>
             <p className="text-[#71717A] text-sm">Las listas del usuario aparecerán aquí</p>
+          </div>
+        )}
+
+        {/* Backlog tab */}
+        {activeTab === 'Backlog' && (
+          <div key="tab-backlog" className="tab-content">
+            <BacklogTab username={username} isOwner={isOwner} token={token} />
           </div>
         )}
 

@@ -65,6 +65,130 @@ function truncateAtWord(text, max) {
   return (lastSpace > max * 0.7 ? cut.slice(0, lastSpace) : cut) + '…';
 }
 
+// ── Game share card (highlights community score) ───────────────────────────
+
+function GameShareCard({ gameName, gameCover, gameYear, gameGenre, gameSummary, communityAvg, communityTotal, username, cardRef }) {
+  const stars = [];
+  for (let i = 1; i <= 5; i++) {
+    const filled = communityAvg != null && communityAvg >= i;
+    const half   = communityAvg != null && !filled && communityAvg >= i - 0.5;
+    stars.push(
+      <span key={i} style={{ fontSize: 22, color: filled || half ? '#A855F7' : '#3F3F46', lineHeight: 1 }}>
+        {filled ? '★' : half ? '⬒' : '☆'}
+      </span>
+    );
+  }
+
+  const synopsis = gameSummary ? truncateAtWord(gameSummary, 480) : null;
+
+  return (
+    <div
+      ref={cardRef}
+      style={{
+        width: 600, height: 600,
+        backgroundColor: '#0A0A0A',
+        position: 'relative',
+        overflow: 'hidden',
+        fontFamily: 'Arial, Helvetica, sans-serif',
+      }}
+    >
+      {/* Gradient blobs */}
+      <div style={{ position: 'absolute', top: -120, left: -120, width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.28) 0%, transparent 70%)' }} />
+      <div style={{ position: 'absolute', bottom: -80, right: -80, width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(107,33,168,0.2) 0%, transparent 70%)' }} />
+
+      {/* Game cover */}
+      {gameCover && (
+        <>
+          <img
+            src={gameCover} alt=""
+            style={{ position: 'absolute', left: 0, top: 0, width: 230, height: 600, objectFit: 'cover' }}
+          />
+          <div style={{ position: 'absolute', left: 160, top: 0, width: 100, height: 600, background: 'linear-gradient(to right, transparent, #0A0A0A)' }} />
+        </>
+      )}
+
+      {/* Right content */}
+      <div style={{
+        position: 'absolute', left: gameCover ? 270 : 40, top: 0, right: 0, bottom: 0,
+        padding: '36px 28px',
+        boxSizing: 'border-box',
+        display: 'flex', flexDirection: 'column',
+      }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#A855F7' }} />
+          <span style={{ color: '#A855F7', fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>
+            myRankee
+          </span>
+        </div>
+
+        {/* Game title + meta */}
+        <div style={{ flexShrink: 0, marginTop: 16 }}>
+          <h1 style={{ color: '#FFFFFF', fontSize: 22, fontWeight: 900, lineHeight: 1.2, margin: 0 }}>
+            {gameName}
+          </h1>
+          {(gameYear || gameGenre) && (
+            <p style={{ color: '#71717A', fontSize: 12, margin: '6px 0 0' }}>
+              {[gameYear, gameGenre].filter(Boolean).join(' · ')}
+            </p>
+          )}
+        </div>
+
+        {/* Community score */}
+        <div style={{ flexShrink: 0, marginTop: 20 }}>
+          {communityTotal > 0 ? (
+            <>
+              <div style={{ display: 'flex', gap: 3, marginBottom: 8 }}>{stars}</div>
+              <div>
+                <span style={{ color: '#A855F7', fontSize: 36, fontWeight: 900, lineHeight: 1 }}>
+                  {communityAvg.toFixed(1)}
+                </span>
+                <span style={{ color: '#71717A', fontSize: 16, fontWeight: 400 }}> / 5</span>
+              </div>
+              <p style={{ color: '#71717A', fontSize: 11, margin: '6px 0 0' }}>
+                {communityTotal === 1 ? '1 puntuación en myRankee' : `${communityTotal} puntuaciones en myRankee`}
+              </p>
+            </>
+          ) : (
+            <>
+              <p style={{ color: '#71717A', fontSize: 14, margin: 0 }}>Aún sin puntuar</p>
+              <p style={{ color: '#A855F7', fontSize: 11, margin: '4px 0 0' }}>¡Sé el primero en puntuar!</p>
+            </>
+          )}
+        </div>
+
+        {/* Synopsis */}
+        {synopsis ? (
+          <p style={{
+            flex: 1,
+            minHeight: 0,
+            overflow: 'hidden',
+            color: '#A0A0A0',
+            fontSize: 12,
+            lineHeight: 1.6,
+            margin: '14px 0 0',
+            fontStyle: 'italic',
+          }}>
+            {synopsis}
+          </p>
+        ) : (
+          <div style={{ flex: 1 }} />
+        )}
+
+        {/* Footer */}
+        <div style={{ flexShrink: 0, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {username && (
+            <span style={{ color: '#A855F7', fontSize: 13, fontWeight: 700 }}>@{username}</span>
+          )}
+          <span style={{ color: '#3F3F46', fontSize: 10 }}>myrankee.com</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Review share card ──────────────────────────────────────────────────────────
+
 function ShareCard({ gameName, gameCover, gameYear, gameGenre, userScore, reviewContent, username, cardRef }) {
   const stars = [];
   for (let i = 1; i <= 5; i++) {
@@ -101,7 +225,6 @@ function ShareCard({ gameName, gameCover, gameYear, gameGenre, userScore, review
         <>
           <img
             src={gameCover} alt=""
-            crossOrigin="anonymous"
             style={{ position: 'absolute', left: 0, top: 0, width: 230, height: 600, objectFit: 'cover' }}
           />
           <div style={{ position: 'absolute', left: 160, top: 0, width: 100, height: 600, background: 'linear-gradient(to right, transparent, #0A0A0A)' }} />
@@ -200,39 +323,96 @@ export default function ShareModal({
   gameCover,
   gameYear,
   gameGenre,
+  gameSummary,
+  isGame,
   userScore,
   reviewContent,
   username,
   reviewId,
   onClose,
 }) {
-  const [activeTab,  setActiveTab]  = useState('Tarjeta');
-  const [imgDataUrl, setImgDataUrl] = useState(null);
-  const [generating, setGenerating] = useState(false);
-  const [genError,   setGenError]   = useState(false);
-  const [copied,     setCopied]     = useState('');
+  const [activeTab,      setActiveTab]      = useState('Tarjeta');
+  const [imgDataUrl,     setImgDataUrl]     = useState(null);
+  const [generating,     setGenerating]     = useState(false);
+  const [genError,       setGenError]       = useState(false);
+  const [copied,         setCopied]         = useState('');
+  const [communityStats, setCommunityStats] = useState(null);
+  const [coverBase64,    setCoverBase64]    = useState(null);
+  const [imageLoaded,    setImageLoaded]    = useState(!gameCover); // true immediately when no cover
   const cardRef = useRef(null);
 
-  const shareUrl  = `https://myrankee.com/game/${gameId}${username ? `?ref=@${username}` : ''}`;
-  const shareText = [
-    `Acabo de puntuar ${gameName ?? 'este juego'} en myRankee${userScore != null ? ` con ${userScore}⭐` : ''}.`,
-    reviewContent ? `"${reviewContent.slice(0, 120)}${reviewContent.length > 120 ? '…' : ''}"` : null,
-    `Mira mi reseña: ${shareUrl}`,
-  ].filter(Boolean).join('\n');
+  const shareUrl = `https://myrankee.com/game/${gameId}${username ? `?ref=@${username}` : ''}`;
+  const shareText = isGame
+    ? [
+        communityStats?.total_ratings > 0
+          ? `${gameName} tiene una puntuación media de ${communityStats.avg_score?.toFixed(1)}/5 en myRankee según ${communityStats.total_ratings} ${communityStats.total_ratings === 1 ? 'puntuación' : 'puntuaciones'}.`
+          : `Descubre ${gameName ?? 'este juego'} en myRankee.`,
+        `Ver más: ${shareUrl}`,
+      ].filter(Boolean).join('\n')
+    : [
+        `Acabo de puntuar ${gameName ?? 'este juego'} en myRankee${userScore != null ? ` con ${userScore}⭐` : ''}.`,
+        reviewContent ? `"${reviewContent.slice(0, 120)}${reviewContent.length > 120 ? '…' : ''}"` : null,
+        `Mira mi reseña: ${shareUrl}`,
+      ].filter(Boolean).join('\n');
 
-  // Generate image whenever Tarjeta tab is active and not yet generated
+  // Reset generated PNG and stats when game changes
+  useEffect(() => {
+    setImgDataUrl(null);
+    setGenerating(false);
+    setGenError(false);
+    setCommunityStats(null);
+    setActiveTab('Tarjeta');
+  }, [gameId]);
+
+  // Pre-fetch cover as base64 so html-to-image never has to make external requests
+  useEffect(() => {
+    if (!gameCover) {
+      setCoverBase64(null);
+      setImageLoaded(true);
+      return;
+    }
+    setCoverBase64(null);
+    setImageLoaded(false);
+    let cancelled = false;
+    const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(gameCover)}&t=${gameId}-${Date.now()}`;
+    fetch(proxyUrl)
+      .then((res) => res.blob())
+      .then((blob) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror   = reject;
+        reader.readAsDataURL(blob);
+      }))
+      .then((base64) => { if (!cancelled) { setCoverBase64(base64); setImageLoaded(true); } })
+      .catch(()      => { if (!cancelled) { setImageLoaded(true); } });
+    return () => { cancelled = true; };
+  }, [gameId, gameCover]);
+
+  // Fetch community stats when sharing the game itself
+  useEffect(() => {
+    if (!isGame || communityStats !== null) return;
+    fetch(`/api/games/${gameId}/stats`)
+      .then((r) => r.json())
+      .then((data) => setCommunityStats(data))
+      .catch(() => setCommunityStats({ avg_score: null, total_ratings: 0 }));
+  }, [isGame, gameId]);
+
+  // Generate image once: tab is active, image is loaded, stats ready (for game shares)
   useEffect(() => {
     if (activeTab !== 'Tarjeta' || imgDataUrl || generating) return;
+    if (isGame && communityStats === null) return;
+    if (!imageLoaded) return; // wait for cover img onLoad before capturing
+    if (!cardRef.current) return;
     setGenerating(true);
     setGenError(false);
-    const timer = setTimeout(() => {
-      if (!cardRef.current) { setGenerating(false); return; }
-      toPng(cardRef.current, { pixelRatio: 2, backgroundColor: '#0A0A0A', skipFonts: true })
-        .then((url) => { setImgDataUrl(url); setGenerating(false); })
-        .catch(() => { setGenError(true); setGenerating(false); });
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [activeTab]);
+    toPng(cardRef.current, {
+      pixelRatio: 2,
+      backgroundColor: '#0A0A0A',
+      skipFonts: true,
+    })
+      .then((url) => { setImgDataUrl(url); setGenerating(false); })
+      .catch(() => { setGenError(true); setGenerating(false); });
+  }, [activeTab, communityStats, imageLoaded]);
 
   function recordShare() {
     if (!reviewId) return;
@@ -296,18 +476,32 @@ export default function ShareModal({
 
   return (
     <>
-      {/* Hidden card for image capture */}
+      {/* Hidden card for image capture — cover proxied through our API to avoid CORS */}
       <div style={{ position: 'fixed', left: '-9999px', top: 0, zIndex: -1, pointerEvents: 'none' }}>
-        <ShareCard
-          cardRef={cardRef}
-          gameName={gameName}
-          gameCover={gameCover}
-          gameYear={gameYear}
-          gameGenre={gameGenre}
-          userScore={userScore}
-          reviewContent={reviewContent}
-          username={username}
-        />
+        {isGame ? (
+          <GameShareCard
+            cardRef={cardRef}
+            gameName={gameName}
+            gameCover={coverBase64}
+            gameYear={gameYear}
+            gameGenre={gameGenre}
+            gameSummary={gameSummary}
+            communityAvg={communityStats?.avg_score ?? null}
+            communityTotal={communityStats?.total_ratings ?? 0}
+            username={username}
+          />
+        ) : (
+          <ShareCard
+            cardRef={cardRef}
+            gameName={gameName}
+            gameCover={coverBase64}
+            gameYear={gameYear}
+            gameGenre={gameGenre}
+            userScore={userScore}
+            reviewContent={reviewContent}
+            username={username}
+          />
+        )}
       </div>
 
       {/* Backdrop */}

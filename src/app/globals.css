@@ -270,6 +270,20 @@ button:active:not(:disabled),
   }
 }
 
+/* ── rc-slider overrides ───────────────────────────────────────────────────── */
+
+.rc-slider-handle:focus-visible {
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.4) !important;
+  outline: none !important;
+}
+.rc-slider-handle:hover {
+  border-color: #C084FC !important;
+}
+.rc-slider-handle-dragging {
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.3) !important;
+  border-color: #FFFFFF !important;
+}
+
 /* ── Scrollbar styling ─────────────────────────────────────────────────────── */
 
 .scrollbar-hide::-webkit-scrollbar {

@@ -1,5 +1,6 @@
 import { queryIGDB, coverUrl } from '@/lib/igdb';
 import { translateGenre, translatePlatform } from '@/lib/translations';
+import { getTranslatedSummary } from '@/lib/game-translations';
 
 export async function GET(request, { params }) {
   const { id } = await params;
@@ -41,9 +42,22 @@ export async function GET(request, { params }) {
       ? new Date(g.first_release_date * 1000).getFullYear()
       : null,
     summary: g.summary ?? null,
+    summary_translated: false,
     developer,
     publisher,
   };
+
+  if (g.summary) {
+    const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 3000));
+    const translation = await Promise.race([
+      getTranslatedSummary(g.id, g.summary),
+      timeout,
+    ]);
+    if (translation) {
+      game.summary = translation.text;
+      game.summary_translated = translation.translated;
+    }
+  }
 
   return Response.json(game, {
     headers: { 'Cache-Control': 's-maxage=86400, stale-while-revalidate=3600' },

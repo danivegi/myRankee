@@ -6,6 +6,7 @@ import GameInteractions from '@/app/components/GameInteractions';
 import { queryIGDB, coverUrl } from '@/lib/igdb';
 import pool from '@/lib/db';
 import { translateGenre, translatePlatform } from '@/lib/translations';
+import { getTranslatedSummary } from '@/lib/game-translations';
 
 const anton = Anton({ weight: '400', subsets: ['latin'], display: 'swap' });
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
@@ -93,10 +94,23 @@ export default async function GameDetailPage({ params }) {
     ),
   ]);
 
+  let summaryTranslated = false;
+
   try {
     const results = igdbResults.status === 'fulfilled' ? igdbResults.value : null;
     if (results?.length) {
       const g = results[0];
+
+      let summary = g.summary ?? null;
+      if (summary) {
+        const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 3000));
+        const translation = await Promise.race([getTranslatedSummary(g.id, summary), timeout]);
+        if (translation) {
+          summary = translation.text;
+          summaryTranslated = translation.translated;
+        }
+      }
+
       game = {
         id: g.id,
         name: g.name,
@@ -105,7 +119,7 @@ export default async function GameDetailPage({ params }) {
         genres: g.genres?.map((gen) => translateGenre(gen.name)) ?? [],
         platforms: g.platforms?.map((p) => translatePlatform(p.name)) ?? [],
         year: g.first_release_date ? new Date(g.first_release_date * 1000).getFullYear() : null,
-        summary: g.summary ?? null,
+        summary,
         developer: g.involved_companies?.find((c) => c.developer)?.company?.name ?? null,
       };
     }
@@ -189,9 +203,12 @@ export default async function GameDetailPage({ params }) {
 
           {/* Genre + platform tags */}
           <div className="flex items-center gap-2 flex-wrap">
-            {[...game.genres, ...game.platforms.slice(0, 3)].map((tag) => (
-              <span key={tag} className="px-3 py-1 rounded-full bg-[#1A1A1A] text-[#71717A] text-[11px] font-mono border border-[#1A1A1A]">
-                {tag}
+            {[
+              ...game.genres.map((name) => ({ type: 'genre', name })),
+              ...game.platforms.slice(0, 3).map((name) => ({ type: 'platform', name })),
+            ].map(({ type, name }) => (
+              <span key={`${type}-${name}`} className="px-3 py-1 rounded-full bg-[#1A1A1A] text-[#71717A] text-[11px] font-mono border border-[#1A1A1A]">
+                {name}
               </span>
             ))}
           </div>
@@ -201,13 +218,15 @@ export default async function GameDetailPage({ params }) {
             <div className="flex flex-col gap-1.5">
               <h2 className={`${anton.className} text-white text-[18px]`}>Sinopsis</h2>
               <p className="text-[#71717A] text-sm leading-relaxed">{game.summary}</p>
-              <p className="text-[#3F3F46] text-[11px] font-mono">Sinopsis disponible solo en inglés</p>
+              {!summaryTranslated && (
+                <p className="text-[#3F3F46] text-[11px] font-mono">Sinopsis disponible solo en inglés</p>
+              )}
             </div>
           )}
 
           <GameInteractions
             gameId={game.id}
-            gameData={{ name: game.name, cover: game.cover, year: game.year, genre: game.genres[0] ?? null }}
+            gameData={{ name: game.name, cover: game.cover, year: game.year, genre: game.genres[0] ?? null, summary: game.summary ?? null }}
           />
 
         </div>

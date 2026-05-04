@@ -35,7 +35,7 @@ export const userRegistrationSchema = z.object({
 });
 
 export const userLoginSchema = z.object({
-  email,
+  identifier:    z.string().trim().min(1, 'Introduce tu correo o nombre de usuario'),
   password:      z.string().min(1, 'La contraseña es obligatoria'),
   captcha_token: z.string().optional(),
 });

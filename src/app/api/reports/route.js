@@ -62,12 +62,10 @@ export async function GET(request) {
     await ensureReportsTables();
 
     const user = getUser(request);
-    console.log('[reports GET] user from token:', user?.id ?? null);
     if (!user) return Response.json({ error: 'No autorizado' }, { status: 401 });
 
     const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [user.id]);
     const isAdmin = adminCheck.rows[0]?.is_admin ?? false;
-    console.log('[reports GET] is_admin:', isAdmin);
     if (!isAdmin) return Response.json({ error: 'No tienes permisos de administrador' }, { status: 403 });
 
     const status = request.nextUrl.searchParams.get('status') ?? 'pending';

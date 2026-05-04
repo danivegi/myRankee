@@ -34,8 +34,5 @@ const FALLBACK = '/images/achievements/bronce/primer-premio.png';
 
 export function getAchievementImage(code) {
   const path = ACHIEVEMENT_IMAGES[code] ?? FALLBACK;
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[achievement-images]', code, '->', path);
-  }
   return path;
 }

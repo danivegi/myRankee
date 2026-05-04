@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [showPassword,      setShowPassword]      = useState(false);
   const [loading,           setLoading]           = useState(false);
   const [error,             setError]             = useState('');
-  const [emailError,        setEmailError]        = useState('');
+  const [identifierError,   setIdentifierError]   = useState('');
   const [banner,            setBanner]            = useState('');
   const [needsVerification, setNeedsVerification] = useState('');
   const [resendSent,        setResendSent]        = useState(false);
@@ -40,19 +40,19 @@ export default function LoginPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    setEmailError('');
+    setIdentifierError('');
     setNeedsVerification('');
     setSuspended('');
-    const form     = e.currentTarget;
-    const email    = form.email.value.trim();
-    const password = form.password.value;
+    const form       = e.currentTarget;
+    const identifier = form.identifier.value.trim();
+    const password   = form.password.value;
 
-    if (!email) { setEmailError('Introduce tu correo electrónico'); return; }
+    if (!identifier) { setIdentifierError('Introduce tu correo o nombre de usuario'); return; }
     if (showCaptcha && !captchaToken) { setError('Completa la verificación de seguridad.'); return; }
 
     setLoading(true);
     try {
-      const body = { email, password };
+      const body = { identifier, password };
       if (captchaToken) body.captcha_token = captchaToken;
 
       const res  = await fetch('/api/auth/login', {
@@ -191,15 +191,15 @@ export default function LoginPage() {
             </div>
           ) : (
             <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-              {/* Email */}
+              {/* Email o username */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-white text-xs font-medium" htmlFor="email">Correo electrónico</label>
+                <label className="text-white text-xs font-medium" htmlFor="identifier">Correo electrónico o usuario</label>
                 <input
-                  id="email" name="email" type="email" placeholder="tu@email.com" required
-                  onChange={() => setEmailError('')}
-                  className={`bg-[#111111] border rounded-lg px-4 py-3 text-white text-sm placeholder:text-[#71717A] focus:outline-none transition-colors ${emailError ? 'border-red-500 focus:border-red-400' : 'border-[#1A1A1A] focus:border-[#A855F7]'}`}
+                  id="identifier" name="identifier" type="text" placeholder="tu@email.com o @usuario" autoComplete="username"
+                  onChange={() => setIdentifierError('')}
+                  className={`bg-[#111111] border rounded-lg px-4 py-3 text-white text-sm placeholder:text-[#71717A] focus:outline-none transition-colors ${identifierError ? 'border-red-500 focus:border-red-400' : 'border-[#1A1A1A] focus:border-[#A855F7]'}`}
                 />
-                {emailError && <p className="text-red-400 text-xs">{emailError}</p>}
+                {identifierError && <p className="text-red-400 text-xs">{identifierError}</p>}
               </div>
 
               {/* Password */}

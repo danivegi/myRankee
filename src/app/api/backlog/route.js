@@ -72,3 +72,19 @@ export async function POST(request) {
 
   return Response.json({ entry: result.rows[0], new_achievements: newAchievements });
 }
+
+export async function DELETE(request) {
+  const user = getUser(request);
+  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+
+  const { igdb_game_id } = await request.json();
+  if (!igdb_game_id)
+    return Response.json({ error: 'Falta igdb_game_id' }, { status: 400 });
+
+  await pool.query(
+    'DELETE FROM backlog WHERE user_id = $1 AND igdb_game_id = $2',
+    [user.id, igdb_game_id]
+  );
+
+  return Response.json({ success: true });
+}

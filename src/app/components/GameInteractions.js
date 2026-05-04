@@ -384,14 +384,21 @@ function RatingModal({ gameId, onClose, onSubmit }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 const BACKLOG_OPTIONS = [
-  { status: 'jugado',   label: 'Jugado',    icon: <IconCheck size={15} color="currentColor" /> },
-  { status: 'jugando',  label: 'Jugando',   icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> },
-  { status: 'pendiente',label: 'Pendiente', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
+  { status: 'jugado',    label: 'Jugado',    icon: <IconCheck size={15} color="currentColor" /> },
+  { status: 'jugando',   label: 'Jugando',   icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> },
+  { status: 'pendiente', label: 'Pendiente', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
 ];
+
+const BACKLOG_TOAST = {
+  jugado:    'Marcado como "Jugado" ✓',
+  jugando:   'Marcado como "Jugando" ✓',
+  pendiente: 'Añadido a "Pendiente" ✓',
+};
 
 export default function GameInteractions({ gameId, gameData }) {
   const router = useRouter();
-  const { addAchievementToast } = useToast();
+
+  const { addToast, addAchievementToast } = useToast();
   const [stats, setStats]                 = useState(null);
   const [reviews, setReviews]             = useState([]);
   const [backlogStatus, setBacklog]       = useState(null);
@@ -455,9 +462,11 @@ export default function GameInteractions({ gameId, gameData }) {
         .then((d) => setCurrentUsername(d?.user?.username ?? null))
         .catch(() => {});
     }
-    loadStats();
-    loadReviews();
-    loadBacklog();
+    void (async () => {
+      await loadStats();
+      await loadReviews();
+      await loadBacklog();
+    })();
   }, [gameId]);
 
   function toggleComments(reviewId) {
@@ -520,9 +529,15 @@ export default function GameInteractions({ gameId, gameData }) {
         const backlogData = backlogRes.ok ? await backlogRes.json() : null;
         fireAchievementToasts(backlogData?.new_achievements, addAchievementToast);
         setBacklog(newStatus);
+        addToast(BACKLOG_TOAST[newStatus]);
       } else {
-        // Remove from backlog not implemented yet — just leave as-is for now
+        await fetch('/api/backlog', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ igdb_game_id: gameId }),
+        });
         setBacklog(null);
+        addToast('Eliminado de tu backlog');
       }
       setBacklogL(false);
     });
@@ -575,7 +590,7 @@ export default function GameInteractions({ gameId, gameData }) {
         </button>
 
         <button
-          onClick={() => setShareTarget({ isGame: true })}
+          onClick={() => setShareTarget({ isGame: true, _key: Date.now() })}
           className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#1A1A1A] text-white text-sm hover:bg-[#1A1A1A] transition-colors cursor-pointer"
         >
           <IconShare size={15} />
@@ -695,7 +710,7 @@ export default function GameInteractions({ gameId, gameData }) {
                       </button>
                       {/* Share */}
                       <button
-                        onClick={() => setShareTarget({ reviewId: r.id, username: r.username, score: r.score, content: r.content })}
+                        onClick={() => setShareTarget({ reviewId: r.id, username: r.username, score: r.score, content: r.content, _key: Date.now() })}
                         className="flex items-center gap-1.5 text-[#71717A] hover:text-white text-xs transition-colors cursor-pointer ml-auto"
                         title="Compartir reseña"
                       >
@@ -760,11 +775,14 @@ export default function GameInteractions({ gameId, gameData }) {
       {/* ── Share modal ── */}
       {shareTarget && (
         <ShareModal
+          key={shareTarget._key}
           gameId={gameId}
           gameName={gameData?.name}
           gameCover={gameData?.cover}
           gameYear={gameData?.year}
           gameGenre={gameData?.genre}
+          gameSummary={gameData?.summary ?? null}
+          isGame={!!shareTarget.isGame}
           userScore={shareTarget.score != null ? parseFloat(shareTarget.score) : null}
           reviewContent={shareTarget.content ?? null}
           username={shareTarget.isGame ? currentUsername : shareTarget.username}

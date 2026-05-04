@@ -7,6 +7,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: 'image.api.playstation.com' },
     ],
+    qualities: [75, 100],
   },
   async headers() {
     return [

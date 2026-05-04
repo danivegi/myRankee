@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
+import Slider from 'rc-slider';
+import 'rc-slider/assets/index.css';
 import Navbar from '@/app/components/Navbar';
 
 const anton = Anton({ weight: '400', subsets: ['latin'], display: 'swap' });
@@ -49,7 +51,9 @@ function IconX({ size = 18 }) {
 
 // ── Static filter data ────────────────────────────────────────────────────────
 
-const GENRE_PILLS = ['Todos', 'RPG', 'Acción', 'Aventura', 'Estrategia', 'Indie', 'Deportes', 'Terror'];
+const CURRENT_YEAR = new Date().getFullYear();
+
+const GENRE_PILLS = ['RPG', 'Acción', 'Aventura', 'Estrategia', 'Indie', 'Deportes', 'Terror'];
 
 const PLATFORMS = [
   'PlayStation 5', 'PlayStation 4', 'PlayStation 3', 'PlayStation 2', 'PlayStation',
@@ -62,12 +66,21 @@ const PLATFORMS = [
   'Android', 'iOS',
 ];
 
-const RATING_OPTIONS = [{ label: '4+', stars: 4 }, { label: '3+', stars: 3 }, { label: '2+', stars: 2 }];
-const YEAR_OPTIONS   = ['2024', '2023', '2022'];
-const SORT_OPTIONS   = ['Relevancia', 'Puntuación', 'Recientes', 'Nombre'];
+const RATING_OPTIONS = [
+  { label: '5★', value: '5', stars: 5 },
+  { label: '4+', value: '4', stars: 4 },
+  { label: '3+', value: '3', stars: 3 },
+  { label: '2+', value: '2', stars: 2 },
+  { label: '1+', value: '1', stars: 1 },
+];
 
-const DEFAULT_RATING = '4+';
-const DEFAULT_YEAR   = '2024';
+const BACKLOG_OPTIONS = [
+  { status: 'jugado',    label: 'Jugado' },
+  { status: 'jugando',   label: 'Jugando' },
+  { status: 'pendiente', label: 'Pendiente' },
+];
+
+const SORT_OPTIONS = ['Relevancia', 'Puntuación', 'Recientes', 'Nombre'];
 
 // ── Avatar helper ─────────────────────────────────────────────────────────────
 
@@ -123,9 +136,12 @@ function PlatformCheckbox({ platform, checked, onToggle }) {
   );
 }
 
-function RatingRadio({ label, stars, selected, onSelect }) {
+function RatingOption({ label, value, stars, selected, onSelect }) {
   return (
-    <button onClick={() => onSelect(label)} className="flex items-center gap-2.5 cursor-pointer min-h-[36px]">
+    <button
+      onClick={() => onSelect(selected ? '' : value)}
+      className="flex items-center gap-2.5 cursor-pointer min-h-[36px] w-full text-left"
+    >
       <span
         className="flex items-center justify-center w-4 h-4 rounded-full flex-shrink-0"
         style={{ border: `1.5px solid ${selected ? '#A855F7' : '#71717A'}` }}
@@ -134,9 +150,191 @@ function RatingRadio({ label, stars, selected, onSelect }) {
       </span>
       <div className="flex items-center gap-1">
         <StarRow count={stars} size={14} />
-        <span className="text-[#71717A] font-mono text-[11px] ml-0.5">{label}</span>
+        <span className="font-mono text-[11px] ml-0.5" style={{ color: selected ? '#FFFFFF' : '#71717A' }}>{label}</span>
       </div>
     </button>
+  );
+}
+
+const YEAR_MIN = 1970;
+const YEAR_MAX = CURRENT_YEAR;
+
+function YearRangeSlider({ yearFrom, yearTo, setYearFrom, setYearTo }) {
+  const [localValues, setLocalValues] = useState([
+    yearFrom ? parseInt(yearFrom, 10) : YEAR_MIN,
+    yearTo   ? parseInt(yearTo,   10) : YEAR_MAX,
+  ]);
+  const debounceRef = useRef(null);
+
+  // Sync inward when parent resets (e.g. Limpiar button)
+  useEffect(() => {
+    setLocalValues([
+      yearFrom ? parseInt(yearFrom, 10) : YEAR_MIN,
+      yearTo   ? parseInt(yearTo,   10) : YEAR_MAX,
+    ]);
+  }, [yearFrom, yearTo]);
+
+  function handleChange(values) {
+    setLocalValues(values);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const isFullRange = values[0] === YEAR_MIN && values[1] === YEAR_MAX;
+      setYearFrom(isFullRange ? '' : String(values[0]));
+      setYearTo(  isFullRange ? '' : String(values[1]));
+    }, 300);
+  }
+
+  const isFullRange = localValues[0] === YEAR_MIN && localValues[1] === YEAR_MAX;
+
+  return (
+    <div className="flex flex-col gap-4 px-1">
+      <Slider
+        range
+        min={YEAR_MIN}
+        max={YEAR_MAX}
+        value={localValues}
+        onChange={handleChange}
+        styles={{
+          track: { backgroundColor: '#A855F7', height: 4 },
+          rail:  { backgroundColor: '#2A2A2A', height: 4 },
+          handle: { width: 16, height: 16, marginTop: -6, backgroundColor: '#A855F7', border: '2px solid #FFFFFF', boxShadow: 'none', opacity: 1 },
+        }}
+      />
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[12px] px-2 py-0.5 rounded bg-[#1A1A1A] border border-[#2A2A2A]" style={{ color: isFullRange ? '#52525B' : '#FFFFFF' }}>
+          {localValues[0]}
+        </span>
+        <span className="text-[#52525B] text-xs">—</span>
+        <span className="font-mono text-[12px] px-2 py-0.5 rounded bg-[#1A1A1A] border border-[#2A2A2A]" style={{ color: isFullRange ? '#52525B' : '#FFFFFF' }}>
+          {localValues[1]}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function AccordionSection({ title, children, badge = 0 }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center justify-between w-full py-1 cursor-pointer"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-white text-sm font-semibold">{title}</span>
+          {badge > 0 && (
+            <span className="text-[10px] font-mono bg-[#A855F7] text-[#0A0A0A] rounded-full px-1.5 py-0.5 leading-none">{badge}</span>
+          )}
+        </div>
+        <svg
+          width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="#71717A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
+          className="flex-shrink-0"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open && <div className="mt-3">{children}</div>}
+    </div>
+  );
+}
+
+function CompanySearch({ selectedCompanies, onAdd, onRemove }) {
+  const [q, setQ]               = useState('');
+  const [results, setResults]   = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [open, setOpen]         = useState(false);
+  const wrapperRef              = useRef(null);
+
+  useEffect(() => {
+    if (!q.trim() || q.trim().length < 2) { setResults([]); setOpen(false); return; }
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res  = await fetch(`/api/companies/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        setResults(Array.isArray(data) ? data : []);
+        setOpen(true);
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [q]);
+
+  useEffect(() => {
+    function handler(e) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  function select(company) {
+    if (!selectedCompanies.find((c) => c.id === company.id)) onAdd(company);
+    setQ('');
+    setResults([]);
+    setOpen(false);
+  }
+
+  const unselected = results.filter((r) => !selectedCompanies.find((c) => c.id === r.id));
+
+  return (
+    <div ref={wrapperRef} className="flex flex-col gap-2">
+      <div className="relative">
+        <input
+          type="text"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onFocus={() => unselected.length > 0 && setOpen(true)}
+          placeholder="Buscar compañía..."
+          className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-[13px] placeholder:text-[#52525B] outline-none focus:border-[#A855F7] transition-colors"
+        />
+        {loading && (
+          <svg className="absolute right-2.5 top-2.5 animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A855F7" strokeWidth="2">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+        )}
+        {open && unselected.length > 0 && (
+          <div className="absolute top-full left-0 right-0 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg mt-1 z-20 max-h-44 overflow-y-auto shadow-xl">
+            {unselected.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => select(c)}
+                className="w-full flex items-center justify-between gap-3 px-3 py-2 text-[13px] text-white hover:bg-[#2A2A2A] cursor-pointer transition-colors"
+              >
+                <span className="truncate">{c.name}</span>
+                {c.gamesCount > 0 && (
+                  <span className="text-[#71717A] text-[11px] font-mono flex-shrink-0">
+                    {c.gamesCount === 1 ? '1 juego' : `${c.gamesCount} juegos`}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {selectedCompanies.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedCompanies.map((c) => (
+            <span
+              key={c.id}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-mono"
+              style={{ background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.4)', color: '#A855F7' }}
+            >
+              {c.name}
+              <button onClick={() => onRemove(c.id)} className="cursor-pointer opacity-70 hover:opacity-100 flex-shrink-0">
+                <IconX size={9} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -194,8 +392,6 @@ function GridCard({ game }) {
     </Link>
   );
 }
-
-// ── User card ─────────────────────────────────────────────────────────────────
 
 function UserCard({ user, token }) {
   const [following, setFollowing] = useState(false);
@@ -280,7 +476,14 @@ function UserCard({ user, token }) {
 
 // ── Filter bottom sheet (mobile) ──────────────────────────────────────────────
 
-function FilterBottomSheet({ platforms, togglePlatform, activeRating, setActiveRating, activeYear, setActiveYear, onClose, onClear }) {
+function FilterBottomSheet({
+  platforms, togglePlatform,
+  activeRating, setActiveRating,
+  yearFrom, setYearFrom, yearTo, setYearTo,
+  backlogFilter, toggleBacklog, isLoggedIn,
+  selectedCompanies, onAddCompany, onRemoveCompany, filterResetKey,
+  onClose, onClear,
+}) {
   const [opening, setOpening] = useState(true);
   const [closing, setClosing] = useState(false);
 
@@ -310,7 +513,7 @@ function FilterBottomSheet({ platforms, togglePlatform, activeRating, setActiveR
         className="w-full rounded-t-2xl flex flex-col"
         style={{
           backgroundColor: '#111111',
-          maxHeight: '85vh',
+          maxHeight: '90vh',
           transform: sheetTranslate,
           transition: 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
           borderTop: '1px solid #1A1A1A',
@@ -326,7 +529,10 @@ function FilterBottomSheet({ platforms, togglePlatform, activeRating, setActiveR
             <IconX size={18} />
           </button>
         </div>
+
         <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-6 min-h-0">
+
+          {/* Platform */}
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="text-white text-sm font-semibold">Plataforma</span>
@@ -336,32 +542,82 @@ function FilterBottomSheet({ platforms, togglePlatform, activeRating, setActiveR
                 </button>
               )}
             </div>
-            <div className="flex flex-col gap-1 max-h-[216px] overflow-y-auto pr-1 scrollbar-thin">
+            <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto pr-1">
               {PLATFORMS.map((p) => (
                 <PlatformCheckbox key={p} platform={p} checked={platforms.includes(p)} onToggle={togglePlatform} />
               ))}
             </div>
           </div>
-          <div className="h-px w-full bg-[#1A1A1A]" />
+
+          <div className="h-px bg-[#1A1A1A]" />
+
+          {/* Rating */}
           <div className="flex flex-col gap-3">
-            <span className="text-white text-sm font-semibold">Puntuación mínima</span>
+            <div className="flex items-center justify-between">
+              <span className="text-white text-sm font-semibold">Puntuación mínima</span>
+              {activeRating && (
+                <button onClick={() => setActiveRating('')} className="text-[#A855F7] font-mono text-[11px] hover:underline cursor-pointer">
+                  Limpiar
+                </button>
+              )}
+            </div>
             <div className="flex flex-col gap-1">
-              {RATING_OPTIONS.map(({ label, stars }) => (
-                <RatingRadio key={label} label={label} stars={stars} selected={activeRating === label} onSelect={setActiveRating} />
+              {RATING_OPTIONS.map(({ label, value, stars }) => (
+                <RatingOption key={value} label={label} value={value} stars={stars} selected={activeRating === value} onSelect={setActiveRating} />
               ))}
             </div>
           </div>
-          <div className="h-px w-full bg-[#1A1A1A]" />
+
+          <div className="h-px bg-[#1A1A1A]" />
+
+          {/* Year range */}
           <div className="flex flex-col gap-3">
-            <span className="text-white text-sm font-semibold">Año de lanzamiento</span>
-            <div className="flex items-center gap-2 flex-wrap">
-              {YEAR_OPTIONS.map((y) => (
-                <Pill key={y} active={activeYear === y} mono onClick={() => setActiveYear(y)}>{y}</Pill>
-              ))}
+            <div className="flex items-center justify-between">
+              <span className="text-white text-sm font-semibold">Año de lanzamiento</span>
+              {(yearFrom || yearTo) && (
+                <button onClick={() => { setYearFrom(''); setYearTo(''); }} className="text-[#A855F7] font-mono text-[11px] hover:underline cursor-pointer">
+                  Limpiar
+                </button>
+              )}
             </div>
+            <YearRangeSlider yearFrom={yearFrom} yearTo={yearTo} setYearFrom={setYearFrom} setYearTo={setYearTo} />
           </div>
+
+          <div className="h-px bg-[#1A1A1A]" />
+
+          {/* Backlog (accordion) */}
+          <AccordionSection title="Estado en backlog" badge={backlogFilter.length}>
+            {!isLoggedIn ? (
+              <p className="text-[#52525B] text-xs leading-relaxed">Inicia sesión para filtrar por tu backlog</p>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {BACKLOG_OPTIONS.map(({ status, label }) => (
+                  <PlatformCheckbox
+                    key={status}
+                    platform={label}
+                    checked={backlogFilter.includes(status)}
+                    onToggle={() => toggleBacklog(status)}
+                  />
+                ))}
+              </div>
+            )}
+          </AccordionSection>
+
+          <div className="h-px bg-[#1A1A1A]" />
+
+          {/* Company (accordion) */}
+          <AccordionSection title="Desarrollador / Publisher" badge={selectedCompanies.length}>
+            <CompanySearch
+              key={filterResetKey}
+              selectedCompanies={selectedCompanies}
+              onAdd={onAddCompany}
+              onRemove={onRemoveCompany}
+            />
+          </AccordionSection>
+
         </div>
-        <div className="flex gap-3 px-5 pt-4 pb-6 border-t border-[#1A1A1A] flex-shrink-0" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
+
+        <div className="flex gap-3 px-5 pt-4 border-t border-[#1A1A1A] flex-shrink-0" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
           <button onClick={handleClear} className="flex-1 py-3 rounded-xl border border-[#1A1A1A] text-white text-sm font-semibold hover:bg-[#1A1A1A] transition-colors cursor-pointer min-h-[44px]">
             Limpiar filtros
           </button>
@@ -377,49 +633,131 @@ function FilterBottomSheet({ platforms, togglePlatform, activeRating, setActiveR
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SearchPage() {
-  const [query,        setQuery]        = useState('');
-  const [activeTab,    setActiveTab]    = useState('Juegos'); // 'Juegos' | 'Usuarios'
-  const [gameResults,  setGameResults]  = useState([]);
-  const [userResults,  setUserResults]  = useState([]);
-  const [gamesLoading, setGamesLoading] = useState(false);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [activeGenre,  setActiveGenre]  = useState('Todos');
-  const [platforms,    setPlatforms]    = useState([]);
-  const [activeRating, setActiveRating] = useState(DEFAULT_RATING);
-  const [activeYear,   setActiveYear]   = useState(DEFAULT_YEAR);
-  const [activeSort,   setActiveSort]   = useState('Relevancia');
-  const [view,         setView]         = useState('list');
-  const [sheetOpen,    setSheetOpen]    = useState(false);
-  const [token,        setToken]        = useState(null);
+  const [query,            setQuery]            = useState('');
+  const [activeTab,        setActiveTab]        = useState('Juegos');
+  const [gameResults,      setGameResults]      = useState([]);
+  const [userResults,      setUserResults]      = useState([]);
+  const [gamesLoading,     setGamesLoading]     = useState(false);
+  const [usersLoading,     setUsersLoading]     = useState(false);
+  const [activeGenres,     setActiveGenres]     = useState([]);
+  const [platforms,        setPlatforms]        = useState([]);
+  const [activeRating,     setActiveRating]     = useState('');
+  const [yearFrom,         setYearFrom]         = useState('');
+  const [yearTo,           setYearTo]           = useState('');
+  const [backlogFilter,    setBacklogFilter]    = useState([]);
+  const [selectedCompanies, setSelectedCompanies] = useState([]);
+  const [activeSort,       setActiveSort]       = useState('Relevancia');
+  const [view,             setView]             = useState('list');
+  const [sheetOpen,        setSheetOpen]        = useState(false);
+  const [token,            setToken]            = useState(null);
+  const [initialized,      setInitialized]      = useState(false);
+  const [filterResetKey,   setFilterResetKey]   = useState(0);
+  const [searchError,      setSearchError]      = useState(null); // e.g. 'auth_required'
 
   const activeFilterCount =
     platforms.length +
-    (activeRating !== DEFAULT_RATING ? 1 : 0) +
-    (activeYear   !== DEFAULT_YEAR   ? 1 : 0);
+    activeGenres.length +
+    (activeRating ? 1 : 0) +
+    (yearFrom ? 1 : 0) +
+    (yearTo ? 1 : 0) +
+    backlogFilter.length +
+    selectedCompanies.length;
 
-  // Read initial state from URL on mount
+  // Read all filter state from URL on mount
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    setToken(token);
+    const tok = localStorage.getItem('token');
+    setToken(tok);
 
     const params = new URLSearchParams(window.location.search);
-    const q   = params.get('q');
-    const tab = params.get('tab');
-    if (q)   setQuery(q);
-    if (tab === 'usuarios') setActiveTab('Usuarios');
+
+    const q = params.get('q');
+    if (q) setQuery(q);
+
+    if (params.get('tab') === 'usuarios') setActiveTab('Usuarios');
+
+    const genres = params.get('genres');
+    if (genres) setActiveGenres(genres.split(',').filter((g) => GENRE_PILLS.includes(g)));
+
+    const plats = params.get('platforms');
+    if (plats) setPlatforms(plats.split(',').filter((p) => PLATFORMS.includes(p)));
+
+    const rating = params.get('rating');
+    if (rating && ['1', '2', '3', '4', '5'].includes(rating)) setActiveRating(rating);
+
+    const yf = params.get('year_from');
+    if (yf) setYearFrom(yf);
+    const yt = params.get('year_to');
+    if (yt) setYearTo(yt);
+
+    const backlog = params.get('backlog');
+    if (backlog) setBacklogFilter(backlog.split(',').filter((s) => BACKLOG_OPTIONS.some((o) => o.status === s)));
+
+    const companies = params.get('companies');
+    if (companies) {
+      const parsed = companies.split(',').map((s) => {
+        const idx = s.indexOf('~');
+        if (idx === -1) return null;
+        return { id: Number(s.slice(0, idx)), name: s.slice(idx + 1) };
+      }).filter((c) => c && !isNaN(c.id) && c.name);
+      if (parsed.length > 0) setSelectedCompanies(parsed);
+    }
+
+    setInitialized(true);
   }, []);
+
+  // Write all filter state to URL whenever anything changes (after init)
+  useEffect(() => {
+    if (!initialized) return;
+    const params = new URLSearchParams();
+    if (query.trim())            params.set('q', query.trim());
+    if (activeTab === 'Usuarios') params.set('tab', 'usuarios');
+    if (activeGenres.length > 0)  params.set('genres', activeGenres.join(','));
+    if (platforms.length > 0)    params.set('platforms', platforms.join(','));
+    if (activeRating)            params.set('rating', activeRating);
+    if (yearFrom)                params.set('year_from', yearFrom);
+    if (yearTo)                  params.set('year_to', yearTo);
+    if (backlogFilter.length > 0) params.set('backlog', backlogFilter.join(','));
+    if (selectedCompanies.length > 0)
+      params.set('companies', selectedCompanies.map((c) => `${c.id}~${c.name}`).join(','));
+    const str = params.toString();
+    window.history.replaceState(null, '', str ? `/search?${str}` : '/search');
+  }, [initialized, query, activeTab, activeGenres, platforms, activeRating, yearFrom, yearTo, backlogFilter, selectedCompanies]);
 
   // Fetch game results
   useEffect(() => {
-    if (!query.trim()) { setGameResults([]); return; }
+    const hasText    = query.trim().length > 0;
+    const hasFilters = platforms.length > 0 || activeGenres.length > 0 ||
+      !!activeRating || !!yearFrom || !!yearTo ||
+      backlogFilter.length > 0 || selectedCompanies.length > 0;
+
+    if (!hasText && !hasFilters) { setGameResults([]); setSearchError(null); return; }
+
     const timer = setTimeout(async () => {
       setGamesLoading(true);
+      setSearchError(null);
       try {
-        const params = new URLSearchParams({ q: query });
-        if (platforms.length > 0) params.set('platforms', platforms.join(','));
-        const res  = await fetch(`/api/games/search?${params}`);
+        const params = new URLSearchParams();
+        if (query.trim())                 params.set('q', query.trim());
+        if (platforms.length > 0)         params.set('platforms', platforms.join(','));
+        if (activeGenres.length > 0)      params.set('genres', activeGenres.join(','));
+        if (activeRating)                 params.set('min_rating', activeRating);
+        if (yearFrom)                     params.set('year_from', yearFrom);
+        if (yearTo)                       params.set('year_to', yearTo);
+        if (backlogFilter.length > 0)     params.set('backlog_status', backlogFilter.join(','));
+        if (selectedCompanies.length > 0) params.set('company_ids', selectedCompanies.map((c) => c.id).join(','));
+
+        const headers = {};
+        if (backlogFilter.length > 0 && token) headers.Authorization = `Bearer ${token}`;
+
+        const res  = await fetch(`/api/games/search?${params}`, { headers });
         const data = await res.json();
-        setGameResults(Array.isArray(data) ? data : []);
+
+        if (!res.ok) {
+          setSearchError(data?.error ?? 'error');
+          setGameResults([]);
+        } else {
+          setGameResults(Array.isArray(data) ? data : []);
+        }
       } catch {
         setGameResults([]);
       } finally {
@@ -427,7 +765,7 @@ export default function SearchPage() {
       }
     }, 400);
     return () => clearTimeout(timer);
-  }, [query, platforms]);
+  }, [query, platforms, activeGenres, activeRating, yearFrom, yearTo, backlogFilter, selectedCompanies, token]);
 
   // Fetch user results
   useEffect(() => {
@@ -447,12 +785,18 @@ export default function SearchPage() {
     return () => clearTimeout(timer);
   }, [query]);
 
+  // Client-side sort derived from gameResults
+  const sortedGameResults = useMemo(() => {
+    if (!gameResults.length) return gameResults;
+    switch (activeSort) {
+      case 'Nombre':    return [...gameResults].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+      case 'Recientes': return [...gameResults].sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
+      default:          return gameResults;
+    }
+  }, [gameResults, activeSort]);
+
   function handleTabChange(tab) {
     setActiveTab(tab);
-    const params = new URLSearchParams(window.location.search);
-    params.set('tab', tab === 'Usuarios' ? 'usuarios' : 'juegos');
-    if (query.trim()) params.set('q', query.trim());
-    window.history.replaceState(null, '', `/search?${params}`);
   }
 
   function togglePlatform(p) {
@@ -460,10 +804,24 @@ export default function SearchPage() {
     setPlatforms((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]);
   }
 
+  function toggleGenre(g) {
+    setActiveGenres((prev) => prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]);
+  }
+
+  function toggleBacklog(s) {
+    setBacklogFilter((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
+  }
+
   function clearAllFilters() {
     setPlatforms([]);
-    setActiveRating(DEFAULT_RATING);
-    setActiveYear(DEFAULT_YEAR);
+    setActiveGenres([]);
+    setActiveRating('');
+    setYearFrom('');
+    setYearTo('');
+    setBacklogFilter([]);
+    setSelectedCompanies([]);
+    setFilterResetKey((k) => k + 1);
+    setSearchError(null);
   }
 
   const loading = activeTab === 'Juegos' ? gamesLoading : usersLoading;
@@ -493,7 +851,7 @@ export default function SearchPage() {
           )}
         </div>
 
-        {/* Tabs: Juegos / Usuarios */}
+        {/* Tabs */}
         <div className="flex border-b border-[#1A1A1A]">
           {['Juegos', 'Usuarios'].map((tab) => {
             const active = activeTab === tab;
@@ -503,13 +861,11 @@ export default function SearchPage() {
                 onClick={() => handleTabChange(tab)}
                 className={[
                   'px-5 py-2.5 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-px',
-                  active
-                    ? 'text-white border-[#A855F7]'
-                    : 'text-[#71717A] border-transparent hover:text-white',
+                  active ? 'text-white border-[#A855F7]' : 'text-[#71717A] border-transparent hover:text-white',
                 ].join(' ')}
               >
                 {tab}
-                {tab === 'Juegos' && query.trim() && !gamesLoading && (
+                {tab === 'Juegos' && (query.trim() || activeFilterCount > 0) && !gamesLoading && (
                   <span className="ml-1.5 text-[11px] font-mono text-[#71717A]">({gameResults.length})</span>
                 )}
                 {tab === 'Usuarios' && query.trim() && !usersLoading && (
@@ -520,7 +876,7 @@ export default function SearchPage() {
           })}
         </div>
 
-        {/* Mobile filters button — only on Juegos tab */}
+        {/* Mobile filter button + clear — Juegos tab only */}
         {activeTab === 'Juegos' && (
           <div className="flex items-center gap-3 lg:hidden">
             <button
@@ -538,35 +894,57 @@ export default function SearchPage() {
           </div>
         )}
 
-        {/* Results count — only on Juegos tab */}
-        {activeTab === 'Juegos' && query.trim() && !gamesLoading && (
+        {/* Results count */}
+        {activeTab === 'Juegos' && (query.trim() || activeFilterCount > 0) && !gamesLoading && gameResults.length > 0 && (
           <p className="text-sm">
             <span className="text-[#A3A3A3]">Se encontraron </span>
             <span className="text-white font-semibold">{gameResults.length} juegos</span>
-            <span className="text-[#A3A3A3]"> para </span>
-            <span className="text-[#A855F7] font-semibold">&ldquo;{query}&rdquo;</span>
+            {query.trim() ? (
+              <>
+                <span className="text-[#A3A3A3]"> para </span>
+                <span className="text-[#A855F7] font-semibold">&ldquo;{query}&rdquo;</span>
+                {activeFilterCount > 0 && <span className="text-[#A3A3A3]"> con tus filtros</span>}
+              </>
+            ) : (
+              <span className="text-[#A3A3A3]"> con tus filtros</span>
+            )}
           </p>
         )}
 
-        {/* Genre pills — only on Juegos tab */}
+        {/* Genre pills — multi-select, Juegos tab only */}
         {activeTab === 'Juegos' && (
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            <Pill active={activeGenres.length === 0} onClick={() => setActiveGenres([])}>
+              Todos
+            </Pill>
             {GENRE_PILLS.map((g) => (
-              <Pill key={g} active={activeGenre === g} onClick={() => setActiveGenre(g)}>{g}</Pill>
+              <Pill key={g} active={activeGenres.includes(g)} onClick={() => toggleGenre(g)}>
+                {g}
+              </Pill>
             ))}
           </div>
         )}
       </div>
 
       {/* ── Content area ── */}
-      <div className={`flex gap-8 px-4 lg:px-12 py-4 lg:py-6 ${activeTab === 'Usuarios' ? '' : ''}`}>
+      <div className="flex gap-8 px-4 lg:px-12 py-4 lg:py-6">
 
-        {/* Sidebar — desktop only, Juegos tab only */}
+        {/* Desktop sidebar — Juegos tab only */}
         {activeTab === 'Juegos' && (
-          <aside className="hidden lg:flex flex-col gap-6 w-[260px] flex-shrink-0">
-            <span className={`${anton.className} text-white text-xl`}>Filtros</span>
+          <aside className="hidden lg:flex flex-col gap-5 w-[260px] flex-shrink-0">
+
+            <div className="flex items-center justify-between">
+              <span className={`${anton.className} text-white text-xl`}>Filtros</span>
+              {activeFilterCount > 0 && (
+                <button onClick={clearAllFilters} className="text-[#A855F7] font-mono text-[11px] hover:underline cursor-pointer">
+                  Limpiar ({activeFilterCount})
+                </button>
+              )}
+            </div>
+
             <div className="h-px w-full bg-[#1A1A1A]" />
 
+            {/* Platform */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <span className="text-white text-sm font-semibold">Plataforma</span>
@@ -585,25 +963,77 @@ export default function SearchPage() {
 
             <div className="h-px w-full bg-[#1A1A1A]" />
 
+            {/* Rating */}
             <div className="flex flex-col gap-3">
-              <span className="text-white text-sm font-semibold">Puntuación mínima</span>
-              <div className="flex flex-col gap-2">
-                {RATING_OPTIONS.map(({ label, stars }) => (
-                  <RatingRadio key={label} label={label} stars={stars} selected={activeRating === label} onSelect={setActiveRating} />
+              <div className="flex items-center justify-between">
+                <span className="text-white text-sm font-semibold">Puntuación mínima</span>
+                {activeRating && (
+                  <button onClick={() => setActiveRating('')} className="text-[#A855F7] font-mono text-[11px] hover:underline cursor-pointer">
+                    Limpiar
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                {RATING_OPTIONS.map(({ label, value, stars }) => (
+                  <RatingOption
+                    key={value}
+                    label={label}
+                    value={value}
+                    stars={stars}
+                    selected={activeRating === value}
+                    onSelect={setActiveRating}
+                  />
                 ))}
               </div>
             </div>
 
             <div className="h-px w-full bg-[#1A1A1A]" />
 
+            {/* Year range */}
             <div className="flex flex-col gap-3">
-              <span className="text-white text-sm font-semibold">Año de lanzamiento</span>
-              <div className="flex items-center gap-2 flex-wrap">
-                {YEAR_OPTIONS.map((y) => (
-                  <Pill key={y} active={activeYear === y} mono onClick={() => setActiveYear(y)}>{y}</Pill>
-                ))}
+              <div className="flex items-center justify-between">
+                <span className="text-white text-sm font-semibold">Año de lanzamiento</span>
+                {(yearFrom || yearTo) && (
+                  <button onClick={() => { setYearFrom(''); setYearTo(''); }} className="text-[#A855F7] font-mono text-[11px] hover:underline cursor-pointer">
+                    Limpiar
+                  </button>
+                )}
               </div>
+              <YearRangeSlider yearFrom={yearFrom} yearTo={yearTo} setYearFrom={setYearFrom} setYearTo={setYearTo} />
             </div>
+
+            <div className="h-px w-full bg-[#1A1A1A]" />
+
+            {/* Backlog (collapsible) */}
+            <AccordionSection title="Estado en backlog" badge={backlogFilter.length}>
+              {!token ? (
+                <p className="text-[#52525B] text-xs leading-relaxed">Inicia sesión para filtrar por tu backlog</p>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {BACKLOG_OPTIONS.map(({ status, label }) => (
+                    <PlatformCheckbox
+                      key={status}
+                      platform={label}
+                      checked={backlogFilter.includes(status)}
+                      onToggle={() => toggleBacklog(status)}
+                    />
+                  ))}
+                </div>
+              )}
+            </AccordionSection>
+
+            <div className="h-px w-full bg-[#1A1A1A]" />
+
+            {/* Company (collapsible) */}
+            <AccordionSection title="Desarrollador / Publisher" badge={selectedCompanies.length}>
+              <CompanySearch
+                key={filterResetKey}
+                selectedCompanies={selectedCompanies}
+                onAdd={(c) => setSelectedCompanies((prev) => [...prev, c])}
+                onRemove={(id) => setSelectedCompanies((prev) => prev.filter((c) => c.id !== id))}
+              />
+            </AccordionSection>
+
           </aside>
         )}
 
@@ -648,31 +1078,70 @@ export default function SearchPage() {
                 </div>
               </div>
 
-              {!query.trim() && (
-                <div className="flex items-center justify-center py-24">
-                  <p className="text-[#71717A] text-sm">Escribe algo para buscar juegos</p>
+              {/* Default discovery state — no text, no filters */}
+              {!query.trim() && activeFilterCount === 0 && (
+                <div className="flex flex-col items-center gap-4 py-24 text-center">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <div className="flex flex-col gap-1.5">
+                    <p className="text-white text-sm font-medium">Descubre juegos</p>
+                    <p className="text-[#71717A] text-sm">Usa el buscador o aplica filtros para encontrar juegos</p>
+                    <p className="text-[#3F3F46] text-xs font-mono mt-0.5">Prueba: &ldquo;Elden Ring&rdquo; · filtra por RPG · o explora por año</p>
+                  </div>
                 </div>
               )}
-              {query.trim() && gamesLoading && (
+
+              {/* Loading */}
+              {gamesLoading && (
                 <div className="flex items-center justify-center py-24">
                   <p className="text-[#71717A] text-sm">Buscando...</p>
                 </div>
               )}
-              {query.trim() && !gamesLoading && gameResults.length === 0 && (
+
+              {/* Auth error (e.g. backlog filter without login) */}
+              {!gamesLoading && searchError === 'auth_required' && (
+                <div className="flex flex-col items-center gap-3 py-24 text-center">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-white text-sm font-medium">Inicia sesión para usar este filtro</p>
+                    <p className="text-[#71717A] text-sm">El filtro de backlog requiere tener una cuenta.</p>
+                    <Link href="/login" className="text-[#A855F7] text-sm hover:underline mt-1">Iniciar sesión →</Link>
+                  </div>
+                </div>
+              )}
+
+              {/* No results */}
+              {!gamesLoading && !searchError && (query.trim() || activeFilterCount > 0) && sortedGameResults.length === 0 && (
                 <div className="flex flex-col items-center gap-4 py-24 text-center">
                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                     <line x1="8" y1="11" x2="14" y2="11" />
                   </svg>
                   <div className="flex flex-col gap-1">
-                    <p className="text-white text-sm font-medium">Sin resultados para &ldquo;{query}&rdquo;</p>
-                    <p className="text-[#71717A] text-sm">No encontramos juegos para tu búsqueda. Prueba con otro término.</p>
+                    {query.trim()
+                      ? <p className="text-white text-sm font-medium">Sin resultados para &ldquo;{query}&rdquo;</p>
+                      : <p className="text-white text-sm font-medium">Sin resultados con estos filtros</p>
+                    }
+                    <p className="text-[#71717A] text-sm">
+                      {activeFilterCount > 0
+                        ? 'Prueba ajustando los filtros o busca con otro término.'
+                        : 'No encontramos juegos para tu búsqueda. Prueba con otro término.'}
+                    </p>
+                    {activeFilterCount > 0 && (
+                      <button onClick={clearAllFilters} className="text-[#A855F7] text-sm hover:underline cursor-pointer mt-1">
+                        Limpiar filtros ({activeFilterCount})
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
-              {!gamesLoading && gameResults.length > 0 && (
+              {!gamesLoading && sortedGameResults.length > 0 && (
                 <div className={view === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4' : 'flex flex-col'}>
-                  {gameResults.map((game, i) => (
+                  {sortedGameResults.map((game, i) => (
                     view === 'grid'
                       ? <GridCard key={game.id} game={game} />
                       : <GameCard key={game.id} game={game} index={i} />
@@ -729,8 +1198,17 @@ export default function SearchPage() {
           togglePlatform={togglePlatform}
           activeRating={activeRating}
           setActiveRating={setActiveRating}
-          activeYear={activeYear}
-          setActiveYear={setActiveYear}
+          yearFrom={yearFrom}
+          setYearFrom={setYearFrom}
+          yearTo={yearTo}
+          setYearTo={setYearTo}
+          backlogFilter={backlogFilter}
+          toggleBacklog={toggleBacklog}
+          isLoggedIn={!!token}
+          selectedCompanies={selectedCompanies}
+          onAddCompany={(c) => setSelectedCompanies((prev) => [...prev, c])}
+          onRemoveCompany={(id) => setSelectedCompanies((prev) => prev.filter((c) => c.id !== id))}
+          filterResetKey={filterResetKey}
           onClose={() => setSheetOpen(false)}
           onClear={clearAllFilters}
         />
