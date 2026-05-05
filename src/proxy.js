@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-const ALLOWED_ORIGINS = [
+const ALLOWED_ORIGINS = new Set([
   'http://localhost:3000',
   'http://localhost:3001',
-];
+  'https://myrankee.vercel.app',
+]);
 
 export function proxy(request) {
   const { pathname } = request.nextUrl;
@@ -17,7 +18,7 @@ export function proxy(request) {
 
   const origin = request.headers.get('origin');
 
-  if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
+  if (!origin || !ALLOWED_ORIGINS.has(origin)) {
     return NextResponse.json(
       { error: 'Solicitud no permitida' },
       { status: 403 }
