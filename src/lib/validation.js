@@ -88,20 +88,33 @@ export const passwordResetSchema = z.object({
 // ── Validation helper ─────────────────────────────────────────────────────────
 
 export function validate(schema, data) {
-  const result = schema.safeParse(data);
+  let result;
+  try {
+    result = schema.safeParse(data);
+  } catch (err) {
+    console.error('[validation] safeParse threw unexpectedly:', err);
+    return { ok: false, errors: [{ field: 'input', message: 'Error de validación inesperado' }] };
+  }
+
   if (!result.success) {
-    const details = result.error.errors.map((e) => ({
+    const rawErrors = result.error?.errors;
+    if (!Array.isArray(rawErrors)) {
+      console.error('[validation] result.error.errors is not an array:', result.error);
+      return { ok: false, errors: [{ field: 'input', message: 'Datos inválidos' }] };
+    }
+    const details = rawErrors.map((e) => ({
       field:   e.path.join('.') || 'input',
       message: e.message,
     }));
     return { ok: false, errors: details };
   }
+
   return { ok: true, data: result.data };
 }
 
 export function validationErrorResponse(errors) {
   return Response.json(
-    { error: 'Datos inválidos', details: errors },
+    { error: 'Datos inválidos', details: errors ?? [] },
     { status: 400 }
   );
 }
