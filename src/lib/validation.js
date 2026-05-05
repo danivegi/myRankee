@@ -2,14 +2,12 @@ import { z } from 'zod';
 
 // Reusable field primitives
 const nombre = z.string().trim()
-  .min(2,  'El nombre debe tener al menos 2 caracteres')
-  .max(50, 'El nombre no puede superar los 50 caracteres')
-  .regex(/^[a-zA-ZÀ-ÿ\s]+$/, 'El nombre solo puede contener letras y espacios');
+  .min(1,  'El nombre es requerido')
+  .max(50, 'El nombre no puede superar los 50 caracteres');
 
 const apellido = z.string().trim()
-  .min(2,  'El apellido debe tener al menos 2 caracteres')
-  .max(50, 'El apellido no puede superar los 50 caracteres')
-  .regex(/^[a-zA-ZÀ-ÿ\s]+$/, 'El apellido solo puede contener letras y espacios');
+  .min(1,  'El apellido es requerido')
+  .max(50, 'El apellido no puede superar los 50 caracteres');
 
 const username = z.string().trim()
   .min(3,  'El nombre de usuario debe tener al menos 3 caracteres')
@@ -29,8 +27,8 @@ export const userRegistrationSchema = z.object({
   username,
   email,
   password:       z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
-  age_confirmed:  z.boolean().optional(),
-  captcha_token:  z.string().optional(),
+  age_confirmed:  z.literal(true, { errorMap: () => ({ message: 'Debes confirmar que tienes la edad mínima' }) }),
+  captcha_token:  z.string().min(1, 'La verificación de seguridad es obligatoria'),
   website:        z.string().optional(), // honeypot
 });
 
