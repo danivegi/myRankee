@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -22,6 +23,7 @@ const baseInput = 'bg-[#111111] border rounded-lg px-4 py-3 text-white text-sm p
 const inputCls  = (err) => `${baseInput} ${err ? 'border-red-500 focus:border-red-400' : 'border-[#1A1A1A] focus:border-[#A855F7]'}`;
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [password,        setPassword]        = useState('');
   const [confirm,         setConfirm]         = useState('');
   const [showPassword,    setShowPassword]    = useState(false);
@@ -31,9 +33,15 @@ export default function RegisterPage() {
   const [loading,      setLoading]      = useState(false);
   const [apiError,     setApiError]     = useState('');
   const [fieldErrors,  setFieldErrors]  = useState({});
-  const [sentEmail,    setSentEmail]    = useState('');
+  const [registered,   setRegistered]   = useState(false);
   const [captchaToken, setCaptchaToken] = useState('');
   const captchaRef = useRef(null);
+
+  useEffect(() => {
+    if (!registered) return;
+    const t = setTimeout(() => router.push('/login'), 3000);
+    return () => clearTimeout(t);
+  }, [registered, router]);
 
   function validate({ nombre, apellido, username, email, password, confirm }) {
     const errs = {};
@@ -76,7 +84,7 @@ export default function RegisterPage() {
         setCaptchaToken('');
         return;
       }
-      setSentEmail(data.email || email);
+      setRegistered(true);
     } catch {
       setApiError('Error de conexión. Inténtalo de nuevo.');
     } finally {
@@ -88,7 +96,7 @@ export default function RegisterPage() {
     if (fieldErrors[field]) setFieldErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
   }
 
-  if (sentEmail) {
+  if (registered) {
     return (
       <div className={`${inter.className} flex min-h-screen bg-[#0A0A0A]`}>
         <div className="hidden md:flex relative w-1/2 flex-col">
@@ -103,36 +111,18 @@ export default function RegisterPage() {
           <div className="w-full max-w-[420px] flex flex-col gap-8">
             <span className={`${anton.className} text-white text-3xl md:hidden`}>myrankee</span>
             <div className="flex flex-col gap-6">
-              <div className="w-14 h-14 rounded-full bg-[#A855F7]/10 flex items-center justify-center">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A855F7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                  <polyline points="22,6 12,13 2,6" />
+              <div className="w-14 h-14 rounded-full bg-[#22C55E]/10 flex items-center justify-center">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
               <div className="flex flex-col gap-2">
-                <h1 className={`${anton.className} text-white text-4xl leading-none`}>Verifica tu correo</h1>
+                <h1 className={`${anton.className} text-white text-4xl leading-none`}>¡Bienvenido!</h1>
                 <p className="text-[#71717A] text-sm leading-relaxed">
-                  Te hemos enviado un correo de verificación a{' '}
-                  <span className="text-white">{sentEmail}</span>.{' '}
-                  Revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.
+                  Tu cuenta está lista, ya puedes iniciar sesión.
                 </p>
+                <p className="text-[#3F3F46] text-xs">Redirigiendo automáticamente...</p>
               </div>
-              <p className="text-[#3F3F46] text-xs leading-relaxed">
-                ¿No lo ves? Revisa la carpeta de spam.{' '}
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await fetch('/api/auth/resend-verification', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ email: sentEmail }),
-                    });
-                  }}
-                  className="text-[#A855F7] hover:underline"
-                >
-                  Reenviar correo
-                </button>
-              </p>
               <Link href="/login" className="text-[#A855F7] text-sm hover:underline">
                 Ir al inicio de sesión
               </Link>

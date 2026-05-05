@@ -1,10 +1,10 @@
+// TEMPORARY: Auto-verify new users for fair demo.
+// TODO: Re-enable email verification after configuring myrankee.com domain in Resend.
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 import pool from '@/lib/db';
 import { checkPassword } from '@/lib/password';
 import { ensureAuthTables, logSecurityEvent } from '@/lib/init-auth';
 import { ensureReportsTables } from '@/lib/init-reports';
-import { sendVerificationEmail } from '@/lib/email';
 import { checkRateLimit, getIp, rateLimitResponse, LIMITS } from '@/lib/rate-limit';
 import { validate, userRegistrationSchema, validationErrorResponse } from '@/lib/validation';
 import { verifyCaptcha } from '@/lib/captcha';
@@ -106,7 +106,7 @@ export async function POST(request) {
 
   const result = await pool.query(
     `INSERT INTO users (nombre, apellido, username, email, password_hash, email_verified, terms_accepted_at, age_confirmed)
-     VALUES ($1, $2, $3, $4, $5, false, NOW(), $6)
+     VALUES ($1, $2, $3, $4, $5, true, NOW(), $6)
      RETURNING id, username, email`,
     [nombre, apellido, username, email, password_hash, age_confirmed === true]
   );
@@ -119,16 +119,6 @@ export async function POST(request) {
     [ip, email]
   ).catch(() => {});
 
-  const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-  await pool.query(
-    `INSERT INTO email_verifications (user_id, token, expires_at) VALUES ($1, $2, $3)`,
-    [user.id, token, expiresAt]
-  );
-
-  await sendVerificationEmail(email, token, user.username);
-
   logSecurityEvent({
     userId: user.id,
     eventType: 'register',
@@ -138,7 +128,7 @@ export async function POST(request) {
   });
 
   return Response.json(
-    { message: 'Cuenta creada. Revisa tu correo para verificarla.', email },
+    { message: '¡Bienvenido a myRankee! Tu cuenta está lista.', email },
     { status: 201 }
   );
 }
