@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Anton, Inter } from 'next/font/google';
+import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '@/app/components/Navbar';
 import { useToast } from '@/app/components/ToastProvider';
@@ -12,59 +13,274 @@ const anton = Anton({ weight: '400', subsets: ['latin'], display: 'swap' });
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 const inputCls =
-  'w-full bg-[#111111] border border-[#1A1A1A] rounded-xl px-4 py-3 text-white text-sm placeholder-[#3F3F46] focus:outline-none focus:border-[#A855F7] transition-colors';
+  'w-full bg-[#0A0A0A] border border-[#1A1A1A] rounded-xl px-4 py-3 text-white text-sm placeholder-[#3F3F46] focus:outline-none focus:border-[#A855F7] transition-colors';
+
+const TABS = [
+  { id: 'perfil',         label: 'Perfil',        icon: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></> },
+  { id: 'cuenta',         label: 'Cuenta',         icon: <><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></> },
+  { id: 'notificaciones', label: 'Notificaciones', icon: <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></> },
+  { id: 'peligro',        label: 'Zona peligro',   icon: <><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></> },
+];
+
+// ── Canvas resize util ─────────────────────────────────────────────────────────
+
+function resizeImageToBlob(file, size = 400) {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      canvas.width  = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const dim = Math.min(img.width, img.height);
+      const sx  = (img.width  - dim) / 2;
+      const sy  = (img.height - dim) / 2;
+      ctx.drawImage(img, sx, sy, dim, dim, 0, 0, size, size);
+      canvas.toBlob(resolve, 'image/jpeg', 0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
 
 // ── Section wrapper ────────────────────────────────────────────────────────────
 
-function Section({ title, children, danger = false }) {
+function Section({ title, subtitle, children, danger = false }) {
   return (
-    <section className={`rounded-2xl border p-8 flex flex-col gap-6 ${
-      danger ? 'border-red-900/60 bg-[#0D0505]' : 'border-[#1A1A1A] bg-[#111111]'
+    <section className={`rounded-2xl border flex flex-col gap-6 ${
+      danger ? 'border-red-900/50 bg-[#0D0505] p-6 sm:p-8' : 'border-[#1A1A1A] bg-[#111111] p-6 sm:p-8'
     }`}>
-      <h2 className={`${anton.className} text-white text-2xl`}>{title}</h2>
+      <div>
+        <h2 className={`${anton.className} text-white text-xl sm:text-2xl`}>{title}</h2>
+        {subtitle && <p className="text-[#71717A] text-sm mt-1">{subtitle}</p>}
+      </div>
       {children}
     </section>
   );
 }
 
-// ── Change password ────────────────────────────────────────────────────────────
+// ── Profile section ────────────────────────────────────────────────────────────
+
+function ProfileSection({ token, user, onUserUpdate }) {
+  const { addToast } = useToast();
+  const fileRef = useRef(null);
+
+  const [form, setForm] = useState({
+    nombre:   user.nombre   ?? '',
+    apellido: user.apellido ?? '',
+    bio:      user.bio      ?? '',
+  });
+  const [avatarUrl,     setAvatarUrl]     = useState(user.avatar_url ?? null);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [saving,        setSaving]        = useState(false);
+
+  const initials = ((form.nombre[0] ?? '') + (form.apellido[0] ?? '')).toUpperCase() || '?';
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm((p) => ({ ...p, [name]: value }));
+  }
+
+  async function handleAvatarFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { addToast('El archivo debe ser una imagen', 'error'); return; }
+
+    setAvatarLoading(true);
+    try {
+      const blob = await resizeImageToBlob(file);
+      if (!blob) { addToast('No se pudo procesar la imagen', 'error'); return; }
+
+      const fd = new FormData();
+      fd.append('avatar', blob, 'avatar.jpg');
+
+      const res  = await fetch('/api/users/avatar', {
+        method:  'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body:    fd,
+      });
+      const data = await res.json();
+      if (!res.ok) { addToast(data.error ?? 'Error al subir la imagen', 'error'); return; }
+      setAvatarUrl(data.avatar_url);
+      onUserUpdate({ avatar_url: data.avatar_url });
+      addToast('Avatar actualizado');
+    } catch {
+      addToast('Error de conexión', 'error');
+    } finally {
+      setAvatarLoading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  async function handleRemoveAvatar() {
+    setAvatarLoading(true);
+    try {
+      await fetch('/api/users/avatar', {
+        method:  'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setAvatarUrl(null);
+      onUserUpdate({ avatar_url: null });
+      addToast('Avatar eliminado');
+    } catch {
+      addToast('Error de conexión', 'error');
+    } finally {
+      setAvatarLoading(false);
+    }
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res  = await fetch('/api/users/profile', {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) { addToast(data.error ?? 'Error al guardar', 'error'); return; }
+      onUserUpdate(form);
+      addToast('Perfil actualizado');
+    } catch {
+      addToast('Error de conexión', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <Section title="Foto de perfil">
+        <div className="flex items-center gap-5">
+          {/* Avatar */}
+          <div className="relative flex-shrink-0">
+            {avatarUrl ? (
+              <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-[#1A1A1A]">
+                <Image src={avatarUrl} alt="Avatar" width={80} height={80} className="object-cover w-full h-full" unoptimized />
+              </div>
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-[#A855F7] flex items-center justify-center ring-2 ring-[#1A1A1A]">
+                <span className={`${anton.className} text-[#0A0A0A] text-2xl leading-none select-none`}>{initials}</span>
+              </div>
+            )}
+            {avatarLoading && (
+              <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
+
+          {/* Buttons */}
+          <div className="flex flex-col gap-2">
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarFile} />
+            <button
+              type="button"
+              disabled={avatarLoading}
+              onClick={() => fileRef.current?.click()}
+              className="px-4 py-2 rounded-xl border border-[#3F3F46] text-white text-sm font-semibold hover:border-[#A855F7] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Subir foto
+            </button>
+            {avatarUrl && (
+              <button
+                type="button"
+                disabled={avatarLoading}
+                onClick={handleRemoveAvatar}
+                className="px-4 py-2 rounded-xl border border-[#1A1A1A] text-[#71717A] text-sm hover:text-red-400 hover:border-red-900/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                Eliminar foto
+              </button>
+            )}
+            <p className="text-[#3F3F46] text-xs">JPG, PNG o GIF · máx 2 MB</p>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Información personal">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="block text-[#71717A] text-xs font-mono uppercase tracking-wider mb-2">Nombre</label>
+              <input type="text" name="nombre" value={form.nombre} onChange={handleChange} required className={inputCls} />
+            </div>
+            <div className="flex-1">
+              <label className="block text-[#71717A] text-xs font-mono uppercase tracking-wider mb-2">Apellido</label>
+              <input type="text" name="apellido" value={form.apellido} onChange={handleChange} required className={inputCls} />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[#71717A] text-xs font-mono uppercase tracking-wider mb-2">
+              Nombre de usuario
+            </label>
+            <input
+              type="text"
+              value={`@${user.username}`}
+              disabled
+              className={`${inputCls} opacity-40 cursor-not-allowed`}
+            />
+            <p className="text-[#3F3F46] text-xs mt-1.5">El nombre de usuario no se puede cambiar.</p>
+          </div>
+
+          <div>
+            <label className="block text-[#71717A] text-xs font-mono uppercase tracking-wider mb-2">Biografía</label>
+            <textarea
+              name="bio"
+              value={form.bio}
+              onChange={handleChange}
+              rows={3}
+              maxLength={300}
+              placeholder="Cuéntanos algo sobre ti..."
+              className={`${inputCls} resize-none`}
+            />
+            <p className="text-[#3F3F46] text-xs mt-1.5 text-right">{form.bio.length}/300</p>
+          </div>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-6 py-3 rounded-xl bg-[#A855F7] text-[#0A0A0A] text-sm font-bold hover:bg-[#9333EA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer w-fit"
+          >
+            {saving ? 'Guardando...' : 'Guardar cambios'}
+          </button>
+        </form>
+      </Section>
+    </>
+  );
+}
+
+// ── Password section ───────────────────────────────────────────────────────────
 
 function PasswordSection({ token }) {
   const { addToast } = useToast();
   const [form,   setForm]   = useState({ current: '', next: '', confirm: '' });
   const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState(null);
+  const [error,  setError]  = useState(null);
 
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: value }));
-    setStatus(null);
+    setError(null);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (form.next !== form.confirm) {
-      setStatus({ type: 'error', msg: 'Las contraseñas nuevas no coinciden' });
-      return;
-    }
-    setSaving(true); setStatus(null);
+    if (form.next !== form.confirm) { setError('Las contraseñas nuevas no coinciden'); return; }
+    setSaving(true); setError(null);
     try {
       const res  = await fetch('/api/users/password', {
-        method: 'PUT',
+        method:  'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ current_password: form.current, new_password: form.next }),
+        body:    JSON.stringify({ current_password: form.current, new_password: form.next }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setStatus({ type: 'error', msg: data.error ?? 'Error al cambiar la contraseña' });
-        addToast(data.error ?? 'Error al cambiar la contraseña', 'error');
-      } else {
-        setStatus({ type: 'success', msg: data.message ?? 'Contraseña actualizada' });
-        setForm({ current: '', next: '', confirm: '' });
-        addToast('¡Contraseña cambiada correctamente!');
-      }
+      if (!res.ok) { setError(data.error ?? 'Error al cambiar la contraseña'); addToast(data.error ?? 'Error al cambiar la contraseña', 'error'); }
+      else { setForm({ current: '', next: '', confirm: '' }); addToast('¡Contraseña cambiada correctamente!'); }
     } catch {
-      setStatus({ type: 'error', msg: 'Error de conexión' });
+      setError('Error de conexión');
     } finally {
       setSaving(false);
     }
@@ -86,9 +302,7 @@ function PasswordSection({ token }) {
           <label className="block text-[#71717A] text-xs font-mono uppercase tracking-wider mb-2">Confirmar nueva contraseña</label>
           <input type="password" name="confirm" value={form.confirm} onChange={handleChange} placeholder="Repite la nueva contraseña" required autoComplete="new-password" className={inputCls} />
         </div>
-        {status && (
-          <p className={`text-sm font-medium ${status.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>{status.msg}</p>
-        )}
+        {error && <p className="text-red-400 text-sm">{error}</p>}
         <button type="submit" disabled={saving} className="px-6 py-3 rounded-xl bg-[#A855F7] text-[#0A0A0A] text-sm font-bold hover:bg-[#9333EA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer w-fit">
           {saving ? 'Guardando...' : 'Cambiar contraseña'}
         </button>
@@ -97,7 +311,155 @@ function PasswordSection({ token }) {
   );
 }
 
-// ── Data export ────────────────────────────────────────────────────────────────
+// ── Email section ──────────────────────────────────────────────────────────────
+
+function EmailSection({ token, currentEmail, onEmailUpdate }) {
+  const { addToast } = useToast();
+  const [form,   setForm]   = useState({ new_email: '', password: '' });
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState(null);
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm((p) => ({ ...p, [name]: value }));
+    setError(null);
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true); setError(null);
+    try {
+      const res  = await fetch('/api/users/email', {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? 'Error al actualizar el correo'); }
+      else { setForm({ new_email: '', password: '' }); onEmailUpdate(form.new_email); addToast('Correo actualizado correctamente'); }
+    } catch {
+      setError('Error de conexión');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Section title="Cambiar correo electrónico" subtitle={`Correo actual: ${currentEmail}`}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div>
+          <label className="block text-[#71717A] text-xs font-mono uppercase tracking-wider mb-2">Nuevo correo</label>
+          <input type="email" name="new_email" value={form.new_email} onChange={handleChange} placeholder="nuevo@correo.com" required autoComplete="email" className={inputCls} />
+        </div>
+        <div>
+          <label className="block text-[#71717A] text-xs font-mono uppercase tracking-wider mb-2">Contraseña actual</label>
+          <input type="password" name="password" value={form.password} onChange={handleChange} placeholder="••••••••" required autoComplete="current-password" className={inputCls} />
+        </div>
+        {error && <p className="text-red-400 text-sm">{error}</p>}
+        <button type="submit" disabled={saving} className="px-6 py-3 rounded-xl bg-[#A855F7] text-[#0A0A0A] text-sm font-bold hover:bg-[#9333EA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer w-fit">
+          {saving ? 'Guardando...' : 'Actualizar correo'}
+        </button>
+      </form>
+    </Section>
+  );
+}
+
+// ── Notification toggle ────────────────────────────────────────────────────────
+
+const PREF_META = {
+  comments_on_reviews: { label: 'Comentarios en tus reseñas',       desc: 'Cuando alguien comenta en una de tus reseñas.' },
+  new_followers:       { label: 'Nuevos seguidores',                 desc: 'Cuando alguien empieza a seguirte.' },
+  follows_back:        { label: 'Te siguen de vuelta',               desc: 'Cuando un usuario al que sigues te sigue también.' },
+  review_likes:        { label: 'Likes en tus reseñas',              desc: 'Cuando a alguien le gusta una de tus reseñas.' },
+  list_likes:          { label: 'Likes en tus listas',               desc: 'Cuando a alguien le gusta una de tus listas.' },
+};
+
+function Toggle({ checked, onChange, disabled }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+        checked ? 'bg-[#A855F7]' : 'bg-[#3F3F46]'
+      }`}
+    >
+      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition duration-200 ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
+    </button>
+  );
+}
+
+function NotificationsSection({ token }) {
+  const { addToast } = useToast();
+  const [prefs,   setPrefs]   = useState(null);
+  const [saving,  setSaving]  = useState(null); // key being saved
+
+  useEffect(() => {
+    fetch('/api/users/notification-preferences', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data?.preferences) setPrefs(data.preferences); })
+      .catch(() => {});
+  }, [token]);
+
+  async function handleToggle(key, value) {
+    const next = { ...prefs, [key]: value };
+    setPrefs(next);
+    setSaving(key);
+    try {
+      const res = await fetch('/api/users/notification-preferences', {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify(next),
+      });
+      if (!res.ok) { setPrefs(prefs); addToast('Error al guardar la preferencia', 'error'); }
+    } catch {
+      setPrefs(prefs);
+      addToast('Error de conexión', 'error');
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  return (
+    <Section title="Notificaciones" subtitle="Elige qué notificaciones quieres recibir.">
+      {prefs === null ? (
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex items-center justify-between py-3 border-b border-[#1A1A1A] last:border-0 animate-pulse">
+              <div className="flex flex-col gap-1.5">
+                <div className="h-3.5 w-40 bg-[#1A1A1A] rounded" />
+                <div className="h-3 w-56 bg-[#1A1A1A] rounded" />
+              </div>
+              <div className="h-6 w-11 bg-[#1A1A1A] rounded-full flex-shrink-0" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          {Object.entries(PREF_META).map(([key, { label, desc }]) => (
+            <div key={key} className="flex items-center justify-between gap-4 py-4 border-b border-[#1A1A1A] last:border-0">
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <span className="text-white text-sm font-medium">{label}</span>
+                <span className="text-[#71717A] text-xs leading-relaxed">{desc}</span>
+              </div>
+              <Toggle
+                checked={prefs[key] ?? false}
+                onChange={(v) => handleToggle(key, v)}
+                disabled={saving === key}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </Section>
+  );
+}
+
+// ── Export section ─────────────────────────────────────────────────────────────
 
 function DataExportSection({ token }) {
   const { addToast } = useToast();
@@ -106,17 +468,15 @@ function DataExportSection({ token }) {
   async function handleExport() {
     setLoading(true);
     try {
-      const res = await fetch('/api/users/export-data', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch('/api/users/export-data', { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) { addToast('Error al exportar los datos', 'error'); return; }
-      const blob     = await res.blob();
-      const cd       = res.headers.get('content-disposition') ?? '';
-      const match    = cd.match(/filename="([^"]+)"/);
-      const filename = match ? match[1] : 'myrankee-datos.json';
-      const url      = URL.createObjectURL(blob);
-      const a        = document.createElement('a');
-      a.href = url; a.download = filename; a.click();
+      const blob  = await res.blob();
+      const cd    = res.headers.get('content-disposition') ?? '';
+      const match = cd.match(/filename="([^"]+)"/);
+      const name  = match ? match[1] : 'myrankee-datos.json';
+      const url   = URL.createObjectURL(blob);
+      const a     = document.createElement('a');
+      a.href = url; a.download = name; a.click();
       URL.revokeObjectURL(url);
       addToast('Datos exportados correctamente');
     } catch {
@@ -127,21 +487,16 @@ function DataExportSection({ token }) {
   }
 
   return (
-    <Section title="Exportar mis datos">
-      <p className="text-[#71717A] text-sm leading-relaxed">
-        Descarga toda tu información personal en formato JSON: perfil, puntuaciones, reseñas, listas,
-        backlog, comentarios, logros y relaciones sociales.{' '}
-        <Link href="/privacy#derechos" className="text-[#A855F7] hover:underline">Más sobre tus derechos GDPR</Link>
-      </p>
+    <Section title="Exportar mis datos" subtitle="Descarga toda tu información en formato JSON: perfil, reseñas, listas, backlog y más.">
       <button
         onClick={handleExport}
         disabled={loading}
         className="flex items-center gap-2 px-5 py-3 rounded-xl border border-[#3F3F46] text-white text-sm font-semibold hover:border-[#A855F7] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer w-fit"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="7 10 12 15 17 10" />
-          <line x1="12" y1="15" x2="12" y2="3" />
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
         {loading ? 'Exportando...' : 'Exportar datos'}
       </button>
@@ -149,18 +504,18 @@ function DataExportSection({ token }) {
   );
 }
 
-// ── Danger zone ────────────────────────────────────────────────────────────────
+// ── Danger / delete section ────────────────────────────────────────────────────
 
-function DangerSection({ onLogout, token, username }) {
+function DangerSection({ token, username, onLogout }) {
   const router = useRouter();
   const { addToast } = useToast();
 
-  const [showModal,      setShowModal]      = useState(false);
-  const [confirmInput,   setConfirmInput]   = useState('');
-  const [password,       setPassword]       = useState('');
-  const [confirmed,      setConfirmed]      = useState(false);
-  const [deleting,       setDeleting]       = useState(false);
-  const [deleteError,    setDeleteError]    = useState('');
+  const [showModal,    setShowModal]    = useState(false);
+  const [confirmInput, setConfirmInput] = useState('');
+  const [password,     setPassword]     = useState('');
+  const [confirmed,    setConfirmed]    = useState(false);
+  const [deleting,     setDeleting]     = useState(false);
+  const [deleteError,  setDeleteError]  = useState('');
 
   const canDelete = confirmInput === username && password.length >= 1 && confirmed;
 
@@ -172,18 +527,18 @@ function DangerSection({ onLogout, token, username }) {
     setDeleting(true); setDeleteError('');
     try {
       const res  = await fetch('/api/users/delete-account', {
-        method: 'DELETE',
+        method:  'DELETE',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ password }),
+        body:    JSON.stringify({ password }),
       });
       const data = await res.json();
       if (!res.ok) { setDeleteError(data.error ?? 'Error al eliminar la cuenta'); return; }
       localStorage.removeItem('token');
       setShowModal(false);
-      addToast('Tu cuenta ha sido eliminada. Lamentamos verte ir.');
+      addToast('Tu cuenta ha sido eliminada.');
       setTimeout(() => router.push('/'), 1200);
     } catch {
-      setDeleteError('Error de conexión. Inténtalo de nuevo.');
+      setDeleteError('Error de conexión.');
     } finally {
       setDeleting(false);
     }
@@ -192,27 +547,24 @@ function DangerSection({ onLogout, token, username }) {
   return (
     <>
       <Section title="Zona de peligro" danger>
-        <p className="text-[#71717A] text-sm">Estas acciones son irreversibles. Procede con cuidado.</p>
+        <p className="text-[#71717A] text-sm -mt-2">Estas acciones son irreversibles. Procede con cuidado.</p>
 
-        {/* Logout */}
         <div className="flex items-center justify-between p-4 rounded-xl border border-red-900/40 bg-[#110808]">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-white text-sm font-semibold">Cerrar sesión</span>
-            <span className="text-[#71717A] text-xs">Cierra tu sesión en este dispositivo.</span>
+          <div>
+            <p className="text-white text-sm font-semibold">Cerrar sesión</p>
+            <p className="text-[#71717A] text-xs mt-0.5">Cierra tu sesión en este dispositivo.</p>
           </div>
           <button onClick={onLogout} className="px-5 py-2 rounded-xl border border-red-600 text-red-400 text-sm font-semibold hover:bg-red-600 hover:text-white transition-colors cursor-pointer flex-shrink-0">
             Cerrar sesión
           </button>
         </div>
 
-        {/* Delete account */}
         <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-red-900/40 bg-[#110808]">
-          <div className="flex flex-col gap-1">
-            <span className="text-white text-sm font-semibold">Eliminar mi cuenta</span>
-            <span className="text-[#71717A] text-xs leading-relaxed max-w-sm">
-              Esta acción es irreversible. Se eliminarán permanentemente tu perfil, reseñas, puntuaciones,
-              listas, comentarios y todos tus datos. No podrás recuperarlos.
-            </span>
+          <div>
+            <p className="text-white text-sm font-semibold">Eliminar mi cuenta</p>
+            <p className="text-[#71717A] text-xs mt-0.5 max-w-sm leading-relaxed">
+              Acción irreversible. Se eliminarán tu perfil, reseñas, listas, comentarios y todos tus datos.
+            </p>
           </div>
           <button onClick={openModal} className="flex-shrink-0 px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors cursor-pointer">
             Eliminar cuenta
@@ -220,23 +572,21 @@ function DangerSection({ onLogout, token, username }) {
         </div>
       </Section>
 
-      {/* Confirmation modal */}
       {showModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}
+          style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
           onClick={closeModal}
         >
           <div
             className="w-full max-w-md rounded-2xl border border-red-900/60 bg-[#0D0505] p-8 flex flex-col gap-6"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-full bg-red-600/20 flex items-center justify-center flex-shrink-0">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                  <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                 </svg>
               </div>
               <div>
@@ -245,7 +595,6 @@ function DangerSection({ onLogout, token, username }) {
               </div>
             </div>
 
-            {/* Step 1: type username */}
             <div className="flex flex-col gap-2">
               <label className="text-[#9CA3AF] text-xs">
                 Escribe <span className="text-white font-mono">@{username}</span> para confirmar:
@@ -260,9 +609,8 @@ function DangerSection({ onLogout, token, username }) {
               />
             </div>
 
-            {/* Step 2: password */}
             <div className="flex flex-col gap-2">
-              <label className="text-[#9CA3AF] text-xs">Introduce tu contraseña para confirmar:</label>
+              <label className="text-[#9CA3AF] text-xs">Introduce tu contraseña:</label>
               <input
                 type="password"
                 value={password}
@@ -273,16 +621,11 @@ function DangerSection({ onLogout, token, username }) {
               />
             </div>
 
-            {/* Step 3: final confirmation checkbox */}
             <label className="flex items-start gap-3 cursor-pointer group">
               <div className="relative mt-0.5 flex-shrink-0">
                 <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="sr-only" />
                 <div className={`w-4 h-4 rounded border transition-colors flex items-center justify-center ${confirmed ? 'bg-red-600 border-red-600' : 'bg-[#111111] border-[#2A2A2A] group-hover:border-red-900'}`}>
-                  {confirmed && (
-                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                      <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
+                  {confirmed && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                 </div>
               </div>
               <span className="text-[#9CA3AF] text-xs leading-relaxed">
@@ -293,7 +636,6 @@ function DangerSection({ onLogout, token, username }) {
 
             {deleteError && <p className="text-red-400 text-sm">{deleteError}</p>}
 
-            {/* Actions */}
             <div className="flex gap-3">
               <button onClick={closeModal} disabled={deleting} className="flex-1 py-3 rounded-xl border border-[#2A2A2A] text-white text-sm font-semibold hover:border-[#3F3F46] transition-colors cursor-pointer disabled:opacity-50">
                 Cancelar
@@ -313,13 +655,16 @@ function DangerSection({ onLogout, token, username }) {
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ── Main settings content ──────────────────────────────────────────────────────
 
-export default function SettingsPage() {
-  const router  = useRouter();
-  const [token,    setToken]    = useState(null);
-  const [username, setUsername] = useState('');
-  const [loading,  setLoading]  = useState(true);
+function SettingsContent() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab    = searchParams.get('tab') ?? 'perfil';
+
+  const [token,   setToken]   = useState(null);
+  const [user,    setUser]    = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const t = localStorage.getItem('token');
@@ -329,10 +674,14 @@ export default function SettingsPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!data?.user) { router.push('/login'); return; }
-        setUsername(data.user.username);
+        setUser(data.user);
       })
       .catch(() => router.push('/login'))
       .finally(() => setLoading(false));
+  }, []);
+
+  const handleUserUpdate = useCallback((patch) => {
+    setUser((prev) => ({ ...prev, ...patch }));
   }, []);
 
   function handleLogout() {
@@ -340,10 +689,14 @@ export default function SettingsPage() {
     router.push('/');
   }
 
+  function setTab(id) {
+    router.push(`/settings?tab=${id}`, { scroll: false });
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <span className="text-[#71717A] text-sm">Cargando...</span>
+        <div className="w-6 h-6 border-2 border-[#3F3F46] border-t-[#A855F7] rounded-full animate-spin" />
       </div>
     );
   }
@@ -351,19 +704,95 @@ export default function SettingsPage() {
   return (
     <div className={`${inter.className} min-h-screen bg-[#0A0A0A] w-full`}>
       <Navbar />
-      <div className="max-w-2xl mx-auto px-6 py-12">
-        <div className="mb-10">
-          <Link href={`/user/${username}`} className="text-[#71717A] hover:text-white transition-colors text-sm">
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+        {/* Page header */}
+        <div className="mb-8 flex items-center gap-3">
+          <Link href={`/user/${user?.username}`} className="text-[#71717A] hover:text-white transition-colors text-sm">
             ← Volver al perfil
           </Link>
         </div>
-        <h1 className={`${anton.className} text-white text-[36px] leading-tight mb-8`}>Configuración</h1>
-        <div className="flex flex-col gap-6">
-          <PasswordSection    token={token} />
-          <DataExportSection  token={token} />
-          <DangerSection      onLogout={handleLogout} token={token} username={username} />
+        <h1 className={`${anton.className} text-white text-3xl sm:text-4xl mb-8`}>Configuración</h1>
+
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 items-start">
+
+          {/* ── Sidebar ── */}
+          <nav className="w-full lg:w-52 flex-shrink-0">
+            {/* Mobile: horizontal scroll */}
+            <div className="flex lg:flex-col gap-1 overflow-x-auto pb-1 lg:pb-0">
+              {TABS.map(({ id, label, icon }) => {
+                const active = activeTab === id;
+                const isDanger = id === 'peligro';
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setTab(id)}
+                    className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors cursor-pointer flex-shrink-0 lg:w-full ${
+                      active
+                        ? isDanger
+                          ? 'bg-red-900/30 text-red-400'
+                          : 'bg-[#A855F7]/15 text-[#A855F7]'
+                        : isDanger
+                          ? 'text-[#71717A] hover:text-red-400 hover:bg-red-900/10'
+                          : 'text-[#71717A] hover:text-white hover:bg-[#1A1A1A]'
+                    }`}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                      {icon}
+                    </svg>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+
+          {/* ── Content ── */}
+          <div className="flex-1 min-w-0 flex flex-col gap-6">
+            {activeTab === 'perfil' && user && (
+              <>
+                <ProfileSection token={token} user={user} onUserUpdate={handleUserUpdate} />
+              </>
+            )}
+
+            {activeTab === 'cuenta' && (
+              <>
+                <EmailSection
+                  token={token}
+                  currentEmail={user?.email ?? ''}
+                  onEmailUpdate={(email) => handleUserUpdate({ email })}
+                />
+                <PasswordSection token={token} />
+              </>
+            )}
+
+            {activeTab === 'notificaciones' && (
+              <NotificationsSection token={token} />
+            )}
+
+            {activeTab === 'peligro' && (
+              <>
+                <DataExportSection token={token} />
+                <DangerSection token={token} username={user?.username ?? ''} onLogout={handleLogout} />
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Page export (Suspense required for useSearchParams) ────────────────────────
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-[#3F3F46] border-t-[#A855F7] rounded-full animate-spin" />
+      </div>
+    }>
+      <SettingsContent />
+    </Suspense>
   );
 }
