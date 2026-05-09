@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
+import Avatar from '@/app/components/Avatar';
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
 import Navbar from '@/app/components/Navbar';
@@ -84,12 +85,6 @@ const SORT_OPTIONS = ['Relevancia', 'Puntuación', 'Recientes', 'Nombre'];
 
 // ── Avatar helper ─────────────────────────────────────────────────────────────
 
-const AVATAR_COLORS = ['#A855F7', '#7C3AED', '#9333EA', '#6D28D9', '#8B5CF6'];
-function colorFor(str = '') {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
-}
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -417,18 +412,7 @@ function UserCard({ user, token }) {
   return (
     <div className="flex flex-col gap-4 p-5 rounded-xl border border-[#1A1A1A] bg-[#111111] hover:border-[#2A2A2A] transition-colors">
       <Link href={`/user/${user.username}`} className="flex flex-col items-center gap-2 text-center">
-        {user.avatar_url ? (
-          <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
-            <Image src={user.avatar_url} alt={user.username} fill className="object-cover" sizes="64px" />
-          </div>
-        ) : (
-          <div
-            className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0 select-none"
-            style={{ backgroundColor: colorFor(user.username) }}
-          >
-            {user.nombre?.charAt(0).toUpperCase()}
-          </div>
-        )}
+        <Avatar user={user} size={64} />
         <div className="flex flex-col gap-0.5">
           <span className="text-white text-sm font-semibold leading-snug hover:text-[#A855F7] transition-colors">
             {user.nombre} {user.apellido}

@@ -6,6 +6,7 @@ import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '@/app/components/Navbar';
+import Avatar from '@/app/components/Avatar';
 
 const anton = Anton({ weight: '400', subsets: ['latin'], display: 'swap' });
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
@@ -363,18 +364,7 @@ export default function ListDetailPage({ params }) {
 
             {/* Creator */}
             <div className="flex items-center gap-3 mb-5">
-              {list.creator.avatar_url ? (
-                <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                  <Image src={list.creator.avatar_url} alt={list.creator.username} fill className="object-cover" sizes="32px" />
-                </div>
-              ) : (
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                  style={{ backgroundColor: '#A855F7' }}
-                >
-                  {list.creator.nombre.charAt(0).toUpperCase()}
-                </div>
-              )}
+              <Avatar user={list.creator} size={32} />
               <div>
                 <Link
                   href={`/user/${list.creator.username}`}

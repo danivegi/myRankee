@@ -6,6 +6,7 @@ import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '@/app/components/Navbar';
+import Avatar from '@/app/components/Avatar';
 import { useToast } from '@/app/components/ToastProvider';
 
 const anton = Anton({ weight: '400', subsets: ['latin'], display: 'swap' });
@@ -67,18 +68,7 @@ function ListCard({ list, tall }) {
         <div className="flex items-center justify-between mt-1">
           {/* Creator */}
           <div className="flex items-center gap-1.5">
-            {list.creator.avatar_url ? (
-              <div className="relative w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
-                <Image src={list.creator.avatar_url} alt={list.creator.username} fill className="object-cover" sizes="20px" />
-              </div>
-            ) : (
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
-                style={{ backgroundColor: '#A855F7' }}
-              >
-                {list.creator.nombre.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <Avatar user={list.creator} size={20} />
             <span className="text-[#71717A] text-[11px]">@{list.creator.username}</span>
           </div>
 

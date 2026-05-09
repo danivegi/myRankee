@@ -5,6 +5,7 @@ import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '@/app/components/Navbar';
+import Avatar from '@/app/components/Avatar';
 import ReviewCommentsSection from '@/app/components/ReviewCommentsSection';
 import ShareModal from '@/app/components/ShareModal';
 import ReportModal from '@/app/components/ReportModal';
@@ -1065,13 +1066,6 @@ function StatsTab({ username, isOwner }) {
   );
 }
 
-const AVATAR_COLORS = ['#A855F7', '#7C3AED', '#9333EA', '#6D28D9', '#8B5CF6'];
-function colorFor(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
-}
-
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function ReviewCard({ review, token, viewerUsername, reviewAuthorUsername }) {
@@ -1283,18 +1277,7 @@ function UserRow({ user, token, viewerUsername }) {
   return (
     <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[#1A1A1A] last:border-0">
       <Link href={`/user/${user.username}`}>
-        {user.avatar_url ? (
-          <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-            <Image src={user.avatar_url} alt={user.username} fill className="object-cover" />
-          </div>
-        ) : (
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 select-none"
-            style={{ backgroundColor: colorFor(user.username) }}
-          >
-            {user.nombre?.charAt(0).toUpperCase()}
-          </div>
-        )}
+        <Avatar user={user} size={40} />
       </Link>
       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
         <Link href={`/user/${user.username}`} className="text-white text-sm font-semibold hover:text-[#A855F7] transition-colors leading-snug">
@@ -1550,17 +1533,7 @@ export default function UserProfilePage({ params }) {
 
           {/* Avatar */}
           <div className="relative w-24 h-24 flex-shrink-0" style={{ marginTop: '-48px' }}>
-            {profile.avatar_url ? (
-              <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-[#0A0A0A]">
-                <Image src={profile.avatar_url} alt={profile.username} fill className="object-cover" />
-              </div>
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-[#A855F7] flex items-center justify-center ring-4 ring-[#0A0A0A]">
-                <span className={`${anton.className} text-[#0A0A0A] text-[32px] leading-none select-none`}>
-                  {profile.nombre.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            )}
+            <Avatar user={profile} size={96} className="ring-4 ring-[#0A0A0A]" />
           </div>
 
           {/* Name + username + bio */}

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
+import Avatar from '@/app/components/Avatar';
 import ReportModal from './ReportModal';
 
 function IconFlag({ size = 11 }) {
@@ -13,12 +13,6 @@ function IconFlag({ size = 11 }) {
   );
 }
 
-const AVATAR_COLORS = ['#A855F7', '#7C3AED', '#9333EA', '#6D28D9', '#8B5CF6'];
-function colorFor(str = '') {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
-}
 
 function timeAgo(date) {
   const diff = Date.now() - new Date(date).getTime();
@@ -133,18 +127,7 @@ export default function ReviewCommentsSection({
               <div key={c.id} className="group flex gap-2.5 items-start">
                 {/* Small avatar */}
                 <Link href={`/user/${c.username}`} className="flex-shrink-0 mt-0.5">
-                  {c.avatar_url ? (
-                    <div className="relative w-6 h-6 rounded-full overflow-hidden">
-                      <Image src={c.avatar_url} alt={c.username} fill className="object-cover" sizes="24px" />
-                    </div>
-                  ) : (
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold select-none"
-                      style={{ backgroundColor: colorFor(c.username), fontSize: '9px' }}
-                    >
-                      {c.nombre?.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  <Avatar user={c} size={24} />
                 </Link>
 
                 {/* Bubble */}

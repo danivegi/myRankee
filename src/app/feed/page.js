@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
+import Avatar from '@/app/components/Avatar';
 import Navbar from '@/app/components/Navbar';
 import ReviewCommentsSection from '@/app/components/ReviewCommentsSection';
 import ShareModal from '@/app/components/ShareModal';
@@ -63,33 +64,6 @@ function StarRating({ value, size = 13 }) {
   );
 }
 
-// ── Avatar ────────────────────────────────────────────────────────────────────
-
-const AVATAR_COLORS = ['#A855F7', '#7C3AED', '#9333EA', '#6D28D9', '#8B5CF6'];
-function colorFor(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
-}
-
-function Avatar({ user, size = 'md' }) {
-  const dim = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm';
-  if (user.avatar_url) {
-    return (
-      <div className={`${dim} rounded-full overflow-hidden flex-shrink-0 relative`}>
-        <Image src={user.avatar_url} alt={user.username} fill className="object-cover" />
-      </div>
-    );
-  }
-  return (
-    <div
-      className={`${dim} rounded-full flex items-center justify-center font-bold text-white flex-shrink-0 select-none`}
-      style={{ backgroundColor: colorFor(user.username) }}
-    >
-      {user.initials}
-    </div>
-  );
-}
 
 // ── Backlog badge ─────────────────────────────────────────────────────────────
 
@@ -335,18 +309,7 @@ function SuggestionsSidebar({ initialItems, token }) {
         {items.map((user) => (
           <div key={user.id} className="flex items-center gap-3">
             <Link href={`/user/${user.username}`}>
-              {user.avatar_url ? (
-                <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                  <Image src={user.avatar_url} alt={user.username} fill className="object-cover" />
-                </div>
-              ) : (
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 select-none"
-                  style={{ backgroundColor: colorFor(user.username) }}
-                >
-                  {user.initials}
-                </div>
-              )}
+              <Avatar user={user} size={32} />
             </Link>
             <div className="flex flex-col gap-0.5 flex-1 min-w-0">
               <Link href={`/user/${user.username}`} className="text-white text-sm font-medium leading-none hover:text-[#A855F7] transition-colors">

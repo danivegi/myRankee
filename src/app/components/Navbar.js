@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
+import Avatar from '@/app/components/Avatar';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
@@ -43,14 +44,6 @@ function IconBell({ size = 18 }) {
   );
 }
 
-// ── Avatar helper ─────────────────────────────────────────────────────────────
-
-const AVATAR_COLORS = ['#A855F7', '#7C3AED', '#9333EA', '#6D28D9', '#8B5CF6'];
-function colorFor(str = '') {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
-}
 
 // ── Search overlay ─────────────────────────────────────────────────────────────
 
@@ -184,18 +177,7 @@ function SearchBox({ onClose }) {
                         onClick={() => { onClose(); router.push(`/user/${user.username}`); }}
                         className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-[#1A1A1A] transition-colors cursor-pointer text-left min-h-[52px]"
                       >
-                        {user.avatar_url ? (
-                          <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                            <Image src={user.avatar_url} alt={user.username} fill className="object-cover" sizes="32px" />
-                          </div>
-                        ) : (
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 select-none"
-                            style={{ backgroundColor: colorFor(user.username) }}
-                          >
-                            {user.nombre?.charAt(0).toUpperCase()}
-                          </div>
-                        )}
+                        <Avatar user={user} size={32} />
                         <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                           <span className="text-white text-sm font-semibold leading-snug line-clamp-1">
                             {user.nombre} {user.apellido}
@@ -460,17 +442,8 @@ export default function Navbar() {
                                   {systemIcon.path}
                                 </svg>
                               </div>
-                            ) : n.from_user?.avatar_url ? (
-                              <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0 mt-0.5">
-                                <Image src={n.from_user.avatar_url} alt={n.from_user.username} fill className="object-cover" sizes="32px" />
-                              </div>
                             ) : (
-                              <div
-                                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5"
-                                style={{ backgroundColor: colorFor(n.from_user?.username ?? '') }}
-                              >
-                                {n.from_user?.nombre?.charAt(0).toUpperCase() ?? '?'}
-                              </div>
+                              <Avatar user={n.from_user ?? {}} size={32} className="mt-0.5" />
                             )}
 
                             <div className="flex-1 min-w-0">
@@ -508,15 +481,7 @@ export default function Navbar() {
                   onClick={() => setDropOpen((v) => !v)}
                   className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer min-h-[44px] px-1"
                 >
-                  {user.avatar_url ? (
-                    <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                      <Image src={user.avatar_url} alt={user.username} fill className="object-cover" />
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold" style={{ backgroundColor: '#A855F7' }}>
-                      {user.nombre.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  <Avatar user={user} size={32} />
                   <span className="text-white text-sm font-medium">{user.nombre}</span>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#71717A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                     className={`transition-transform duration-200 ${dropOpen ? 'rotate-180' : ''}`}>
