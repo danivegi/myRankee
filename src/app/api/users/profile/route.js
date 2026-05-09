@@ -26,21 +26,19 @@ export async function PUT(request) {
   const { ok, data, errors } = validate(profileUpdateSchema, body);
   if (!ok) return validationErrorResponse(errors);
 
-  const { nombre, apellido, bio, avatar_url } = data;
+  const { nombre, apellido, bio } = data;
 
   const result = await pool.query(
     `UPDATE users
-     SET nombre     = $1,
-         apellido   = $2,
-         bio        = $3,
-         avatar_url = $4
-     WHERE id = $5
+     SET nombre   = $1,
+         apellido = $2,
+         bio      = $3
+     WHERE id = $4
      RETURNING id, username, nombre, apellido, bio, avatar_url`,
     [
       sanitizeText(nombre),
       sanitizeText(apellido),
       bio ? sanitizeText(bio) : null,
-      avatar_url ?? null,
       user.id,
     ]
   );

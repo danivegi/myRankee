@@ -69,9 +69,6 @@ export const profileUpdateSchema = z.object({
     .max(300, 'La biografía no puede superar los 300 caracteres')
     .optional()
     .nullable(),
-  avatar_url: z.string().trim().url('La URL del avatar no es válida')
-    .optional()
-    .nullable(),
 });
 
 export const emailSchema = z.object({
