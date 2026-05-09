@@ -6,6 +6,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'images.igdb.com' },
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: 'image.api.playstation.com' },
+      { protocol: 'https', hostname: '*.supabase.co', pathname: '/storage/v1/object/public/**' },
     ],
     qualities: [75, 100],
   },
@@ -42,7 +43,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "img-src 'self' https://images.igdb.com https://res.cloudinary.com https://image.api.playstation.com https://hcaptcha.com https://*.hcaptcha.com data: blob:",
+              "img-src 'self' https://images.igdb.com https://res.cloudinary.com https://image.api.playstation.com https://*.supabase.co https://hcaptcha.com https://*.hcaptcha.com data: blob:",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://hcaptcha.com https://*.hcaptcha.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://hcaptcha.com https://*.hcaptcha.com",
               "font-src 'self' https://fonts.gstatic.com data:",
