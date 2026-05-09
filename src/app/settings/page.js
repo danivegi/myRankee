@@ -207,7 +207,7 @@ function ProfileSection({ token, user, onUserUpdate }) {
               <input type="text" name="nombre" value={form.nombre} onChange={handleChange} required className={inputCls} />
             </div>
             <div className="flex-1">
-              <label className="block text-[#71717A] text-xs font-mono uppercase tracking-wider mb-2">Apellido</label>
+              <label className="block text-[#71717A] text-xs font-mono uppercase tracking-wider mb-2">Apellidos</label>
               <input type="text" name="apellido" value={form.apellido} onChange={handleChange} required className={inputCls} />
             </div>
           </div>
