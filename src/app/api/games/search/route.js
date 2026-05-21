@@ -26,9 +26,7 @@ const PLATFORM_IDS = {
   'Game Boy Advance':    24,
   'Game Boy Color':      22,
   'Game Boy':            33,
-  'PC':                   6,
-  'Mac':                 14,
-  'Linux':                3,
+  'PC':                  [6, 14, 3, 13],  // Win, Mac, Linux, DOS
   'Dreamcast':           23,
   'Saturn':              32,
   'Mega Drive/Genesis':  29,
@@ -70,7 +68,10 @@ export async function GET(request) {
 
   // ── Parse filter params ────────────────────────────────────────────────────
   const selectedPlatforms = searchParams.get('platforms')?.split(',').filter(Boolean) ?? [];
-  const platformIds = selectedPlatforms.map((n) => PLATFORM_IDS[n]).filter(Boolean);
+  const platformIds = selectedPlatforms.flatMap((n) => {
+    const v = PLATFORM_IDS[n];
+    return Array.isArray(v) ? v : v ? [v] : [];
+  });
 
   const selectedGenres = searchParams.get('genres')?.split(',').filter(Boolean) ?? [];
   const genreConditions = selectedGenres.map((g) => GENRE_CONDITIONS[g]).filter(Boolean);

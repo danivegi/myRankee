@@ -117,7 +117,7 @@ export default async function GameDetailPage({ params }) {
         cover: coverUrl(g.cover?.image_id, 'cover_big_2x'),
         heroBg: g.screenshots?.[0] ? coverUrl(g.screenshots[0].image_id, 'screenshot_big') : null,
         genres: g.genres?.map((gen) => translateGenre(gen.name)) ?? [],
-        platforms: g.platforms?.map((p) => translatePlatform(p.name)) ?? [],
+        platforms: [...new Set(g.platforms?.map((p) => translatePlatform(p.name)) ?? [])],
         year: g.first_release_date ? new Date(g.first_release_date * 1000).getFullYear() : null,
         summary,
         developer: g.involved_companies?.find((c) => c.developer)?.company?.name ?? null,

@@ -25,10 +25,16 @@ export const GENRE_TRANSLATIONS = {
   'Quiz/Trivia':                        'Trivial',
 };
 
-// IGDB platform full names — only the two minor cleanups requested.
-// Everything else returns the original IGDB name unchanged.
+// IGDB platform full names → unified display names.
+// All PC-variant platforms collapse to a single "PC".
 export const PLATFORM_TRANSLATIONS = {
   'PC (Microsoft Windows)':  'PC',
+  'Windows':                 'PC',
+  'Mac':                     'PC',
+  'macOS':                   'PC',
+  'Linux':                   'PC',
+  'PC DOS':                  'PC',
+  'DOS':                     'PC',
   'Sega Mega Drive/Genesis': 'Mega Drive',
 };
 
@@ -37,7 +43,7 @@ export function translateGenre(name) {
   return GENRE_TRANSLATIONS[name] ?? name;
 }
 
-/** Translate an IGDB platform name. Returns cleaned name for the two special cases, original otherwise. */
+/** Translate an IGDB platform name. Returns unified name or original if no mapping found. */
 export function translatePlatform(name) {
   return PLATFORM_TRANSLATIONS[name] ?? name;
 }
@@ -47,7 +53,7 @@ export function translateGenres(names) {
   return (names ?? []).map(translateGenre);
 }
 
-/** Translate an array of IGDB platform names. */
+/** Translate and deduplicate an array of IGDB platform names. */
 export function translatePlatforms(names) {
-  return (names ?? []).map(translatePlatform);
+  return [...new Set((names ?? []).map(translatePlatform))];
 }

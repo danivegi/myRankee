@@ -62,7 +62,7 @@ const PLATFORMS = [
   'Xbox Series X|S', 'Xbox One', 'Xbox 360', 'Xbox',
   'Nintendo Switch', 'Wii U', 'Wii', 'GameCube', 'Nintendo 64', 'SNES', 'NES',
   'Nintendo 3DS', 'Game Boy Advance', 'Game Boy Color', 'Game Boy',
-  'PC', 'Mac', 'Linux',
+  'PC',
   'Dreamcast', 'Saturn', 'Mega Drive/Genesis',
   'Android', 'iOS',
 ];

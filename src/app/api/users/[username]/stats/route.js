@@ -76,10 +76,11 @@ export async function GET(request, { params }) {
     .slice(0, 5)
     .map(([name, count]) => ({ name, count }));
 
-  // Aggregate platform counts
+  // Aggregate platform counts — deduplicate per game so Windows+Mac+Linux → one "PC" count
   const platformCounts = {};
   for (const id of uniqueIds) {
-    for (const platform of platformMap[id] ?? []) {
+    const platforms = [...new Set(platformMap[id] ?? [])];
+    for (const platform of platforms) {
       platformCounts[platform] = (platformCounts[platform] ?? 0) + 1;
     }
   }
