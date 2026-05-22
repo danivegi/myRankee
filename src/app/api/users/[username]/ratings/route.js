@@ -33,12 +33,13 @@ export async function GET(request, { params }) {
   try {
     const games = await queryIGDB(
       'games',
-      `fields id,name,cover.image_id; where id = (${ids}); limit ${ratings.length};`
+      `fields id,name,cover.image_id,first_release_date; where id = (${ids}); limit ${ratings.length};`
     );
     for (const g of games ?? []) {
       gameMap[g.id] = {
         name:  g.name,
         cover: g.cover?.image_id ? coverUrl(g.cover.image_id, 'cover_big') : null,
+        year:  g.first_release_date ? new Date(g.first_release_date * 1000).getFullYear() : null,
       };
     }
   } catch {
@@ -51,6 +52,7 @@ export async function GET(request, { params }) {
     created_at:   r.created_at,
     name:         gameMap[r.igdb_game_id]?.name  ?? null,
     cover:        gameMap[r.igdb_game_id]?.cover ?? null,
+    year:         gameMap[r.igdb_game_id]?.year  ?? null,
   }));
 
   return Response.json(enriched);

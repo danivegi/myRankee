@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 import { queryIGDB, coverUrl } from '@/lib/igdb';
 
@@ -11,8 +12,19 @@ export async function GET(request, { params }) {
 
   const userId = userResult.rows[0].id;
 
+  // If the viewer is the owner, include private lists too
+  let viewerUserId = null;
+  const auth = request.headers.get('authorization');
+  if (auth?.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+      viewerUserId = decoded.id;
+    } catch {}
+  }
+  const isOwner = viewerUserId === userId;
+
   const result = await pool.query(
-    `SELECT l.id, l.title, l.description, l.followers_count, l.created_at,
+    `SELECT l.id, l.title, l.description, l.is_public, l.followers_count, l.created_at,
             COUNT(lg.id)::int AS games_count,
             ARRAY(
               SELECT lg2.igdb_game_id FROM list_games lg2
@@ -22,7 +34,7 @@ export async function GET(request, { params }) {
             ) AS cover_game_ids
      FROM lists l
      LEFT JOIN list_games lg ON lg.list_id = l.id
-     WHERE l.user_id = $1 AND l.is_public = true
+     WHERE l.user_id = $1${isOwner ? '' : ' AND l.is_public = true'}
      GROUP BY l.id
      ORDER BY l.created_at DESC`,
     [userId]
@@ -49,7 +61,16 @@ export async function GET(request, { params }) {
         }
       }
 
-      return { ...list, covers };
+      return {
+        id:              list.id,
+        title:           list.title,
+        description:     list.description,
+        is_public:       list.is_public,
+        followers_count: list.followers_count,
+        games_count:     list.games_count,
+        created_at:      list.created_at,
+        covers,
+      };
     })
   );
 

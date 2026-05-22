@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, use } from 'react';
+import { useState, useEffect, useRef, useMemo, use } from 'react';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -1066,6 +1066,68 @@ function StatsTab({ username, isOwner }) {
   );
 }
 
+// ── List card (profile context — no creator row) ──────────────────────────────
+
+function CoverCollageProfile({ covers }) {
+  return (
+    <div className="absolute inset-0 grid grid-cols-2 grid-rows-2">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="relative overflow-hidden bg-[#141414]" style={{ minWidth: 0, minHeight: 0 }}>
+          {covers[i] && (
+            <Image src={covers[i]} alt="" fill className="object-cover" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProfileListCard({ list }) {
+  return (
+    <Link
+      href={`/lists/${list.id}`}
+      className="relative rounded-xl overflow-hidden block h-48 border border-transparent hover:border-[#A855F7] hover:scale-[1.02] transition-all duration-200"
+    >
+      <CoverCollageProfile covers={list.covers ?? []} />
+      <div
+        className="absolute inset-0"
+        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.95) 40%, rgba(0,0,0,0.3) 100%)' }}
+      />
+      <div className="absolute inset-x-0 bottom-0 p-4 flex flex-col gap-1.5">
+        <div className="flex items-start gap-2">
+          <h3 className="text-white font-bold text-sm leading-snug line-clamp-2 flex-1">{list.title}</h3>
+          {!list.is_public && (
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#1A1A1A] text-[#52525B] border border-[#2A2A2A] flex-shrink-0">
+              Privada
+            </span>
+          )}
+        </div>
+        {list.description && (
+          <p className="text-[#71717A] text-xs line-clamp-2 leading-relaxed">{list.description}</p>
+        )}
+        <div className="flex items-center gap-3 text-[#71717A] text-[11px] font-mono mt-0.5">
+          <span className="flex items-center gap-1">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+              <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+            </svg>
+            {list.games_count}
+          </span>
+          <span className="flex items-center gap-1">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            {list.followers_count}
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function ReviewCard({ review, token, viewerUsername, reviewAuthorUsername }) {
@@ -1383,6 +1445,68 @@ export default function UserProfilePage({ params }) {
   const [modalUsers,   setModalUsers]   = useState([]);
   const [modalLoading, setModalLoading] = useState(false);
 
+  // Lists tab state (lazy-loaded on first visit to the tab)
+  const [lists,        setLists]        = useState([]);
+  const [listsLoading, setListsLoading] = useState(false);
+  const [listsLoaded,  setListsLoaded]  = useState(false);
+
+  // Sort state for Juegos and Reseñas tabs
+  const [ratingsSort, setRatingsSort] = useState('recent');
+  const [reviewsSort, setReviewsSort] = useState('recent');
+
+  const sortedRatings = useMemo(() => {
+    if (!ratings.length) return ratings;
+    const arr = [...ratings];
+    switch (ratingsSort) {
+      case 'oldest':
+        return arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      case 'score_desc':
+        return arr.sort((a, b) => parseFloat(b.score ?? 0) - parseFloat(a.score ?? 0));
+      case 'score_asc':
+        return arr.sort((a, b) => parseFloat(a.score ?? 0) - parseFloat(b.score ?? 0));
+      case 'name_asc':
+        return arr.sort((a, b) => {
+          if (!a.name && !b.name) return 0;
+          if (!a.name) return 1;
+          if (!b.name) return -1;
+          return a.name.localeCompare(b.name, 'es');
+        });
+      case 'year_desc':
+        return arr.sort((a, b) => {
+          if (b.year == null && a.year == null) return 0;
+          if (b.year == null) return -1;
+          if (a.year == null) return 1;
+          return b.year - a.year;
+        });
+      default: // 'recent' — already ordered by created_at DESC from the API
+        return arr;
+    }
+  }, [ratings, ratingsSort]);
+
+  const sortedReviews = useMemo(() => {
+    if (!reviews.length) return reviews;
+    const arr = [...reviews];
+    switch (reviewsSort) {
+      case 'oldest':
+        return arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      case 'score_desc':
+        return arr.sort((a, b) => parseFloat(b.score ?? 0) - parseFloat(a.score ?? 0));
+      case 'score_asc':
+        return arr.sort((a, b) => parseFloat(a.score ?? 0) - parseFloat(b.score ?? 0));
+      case 'likes_desc':
+        return arr.sort((a, b) => (b.likes_count ?? 0) - (a.likes_count ?? 0));
+      case 'name_asc':
+        return arr.sort((a, b) => {
+          if (!a.name && !b.name) return 0;
+          if (!a.name) return 1;
+          if (!b.name) return -1;
+          return a.name.localeCompare(b.name, 'es');
+        });
+      default: // 'recent' — already ordered by created_at DESC from the API
+        return arr;
+    }
+  }, [reviews, reviewsSort]);
+
   useEffect(() => {
     if (!username) return;
 
@@ -1446,6 +1570,19 @@ export default function UserProfilePage({ params }) {
   }
 
   useEffect(() => { setTimeout(() => updateIndicator(activeTab), 30); }, [activeTab]);
+
+  // Lazy-load lists when the Listas tab is first opened
+  useEffect(() => {
+    if (activeTab !== 'Listas' || listsLoaded || loading) return;
+    setListsLoading(true);
+    fetch(`/api/users/${username}/lists`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setLists(Array.isArray(data) ? data : []))
+      .catch(() => setLists([]))
+      .finally(() => { setListsLoading(false); setListsLoaded(true); });
+  }, [activeTab, listsLoaded, loading, username, token]);
 
   async function handleFollow() {
     if (!token) return;
@@ -1678,15 +1815,32 @@ export default function UserProfilePage({ params }) {
                 </div>
               </div>
             ) : (
-              reviews.map((r) => (
-                <ReviewCard
-                  key={r.id}
-                  review={r}
-                  token={token}
-                  viewerUsername={viewerUsername}
-                  reviewAuthorUsername={username}
-                />
-              ))
+              <>
+                <div className="flex items-center justify-end gap-2 mb-2">
+                  <span className="text-[#71717A] text-xs font-mono">Ordenar por:</span>
+                  <select
+                    value={reviewsSort}
+                    onChange={(e) => setReviewsSort(e.target.value)}
+                    className="bg-[#111111] border border-[#1A1A1A] text-white text-xs rounded-lg px-3 py-1.5 cursor-pointer focus:outline-none focus:border-[#A855F7] hover:border-[#3F3F46] transition-colors"
+                  >
+                    <option value="recent">Más recientes</option>
+                    <option value="oldest">Más antiguas</option>
+                    <option value="score_desc">Mejor valoradas</option>
+                    <option value="score_asc">Peor valoradas</option>
+                    <option value="likes_desc">Más gustadas</option>
+                    <option value="name_asc">Nombre del juego (A-Z)</option>
+                  </select>
+                </div>
+                {sortedReviews.map((r) => (
+                  <ReviewCard
+                    key={r.id}
+                    review={r}
+                    token={token}
+                    viewerUsername={viewerUsername}
+                    reviewAuthorUsername={username}
+                  />
+                ))}
+              </>
             )}
           </div>
         )}
@@ -1713,22 +1867,63 @@ export default function UserProfilePage({ params }) {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
-                {ratings.map((r) => <GameCard key={r.igdb_game_id} rating={r} />)}
-              </div>
+              <>
+                <div className="flex items-center justify-end gap-2 mb-5">
+                  <span className="text-[#71717A] text-xs font-mono">Ordenar por:</span>
+                  <select
+                    value={ratingsSort}
+                    onChange={(e) => setRatingsSort(e.target.value)}
+                    className="bg-[#111111] border border-[#1A1A1A] text-white text-xs rounded-lg px-3 py-1.5 cursor-pointer focus:outline-none focus:border-[#A855F7] hover:border-[#3F3F46] transition-colors"
+                  >
+                    <option value="recent">Añadido recientemente</option>
+                    <option value="oldest">Añadido hace más tiempo</option>
+                    <option value="score_desc">Mejor valorados</option>
+                    <option value="score_asc">Peor valorados</option>
+                    <option value="name_asc">Nombre (A-Z)</option>
+                    <option value="year_desc">Año de lanzamiento (más nuevos)</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                  {sortedRatings.map((r) => <GameCard key={r.igdb_game_id} rating={r} />)}
+                </div>
+              </>
             )}
           </div>
         )}
 
         {/* Listas tab */}
         {activeTab === 'Listas' && (
-          <div key="tab-listas" className="tab-content flex flex-col items-center gap-4 py-20 text-center pb-10">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-              <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-            </svg>
-            <p className="text-white text-sm font-medium">Próximamente</p>
-            <p className="text-[#71717A] text-sm">Las listas del usuario aparecerán aquí</p>
+          <div key="tab-listas" className="tab-content pb-10">
+            {listsLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="skeleton-shimmer h-48 rounded-xl" />
+                ))}
+              </div>
+            ) : lists.length === 0 ? (
+              <div className="flex flex-col items-center gap-4 py-20 text-center">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                  <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                </svg>
+                <div className="flex flex-col gap-1">
+                  <p className="text-white text-sm font-medium">
+                    {isOwner ? 'Aún no has creado ninguna lista' : 'Este usuario aún no tiene listas públicas'}
+                  </p>
+                  {isOwner && (
+                    <Link href="/lists" className="text-[#A855F7] text-sm hover:underline mt-1">
+                      Crear mi primera lista →
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {lists.map((list) => (
+                  <ProfileListCard key={list.id} list={list} />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
