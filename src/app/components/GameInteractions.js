@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from './ToastProvider';
 import ReviewCommentsSection from './ReviewCommentsSection';
+import Avatar from './Avatar';
 import ShareModal from './ShareModal';
 import ReportModal from './ReportModal';
 
@@ -728,12 +729,9 @@ export default function GameInteractions({ gameId, gameData }) {
                   <div className="h-px w-full bg-[#1A1A1A]" />
                   <div className="flex flex-col gap-3 py-4">
                     <div className="flex items-center gap-3">
-                      <div
-                        className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold"
-                        style={{ backgroundColor: '#A855F7' }}
-                      >
-                        {r.nombre?.charAt(0).toUpperCase()}
-                      </div>
+                      <Link href={`/user/${r.username}`} className="flex-shrink-0">
+                        <Avatar user={{ username: r.username, nombre: r.nombre, avatar_url: r.avatar_url }} size={36} />
+                      </Link>
                       <div className="flex flex-col gap-0.5">
                         <Link href={`/user/${r.username}`} className="text-white text-sm font-semibold hover:text-[#A855F7] transition-colors">
                           @{r.username}
