@@ -123,7 +123,10 @@ export async function GET(request) {
     }
 
     const mergedRows = [...mergeMap.values()]
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .sort(tab === 'popular'
+        ? (a, b) => b.likes_count - a.likes_count || new Date(b.created_at) - new Date(a.created_at)
+        : (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      )
       .slice(0, 20);
 
     // ── Batch-fetch IGDB game data ────────────────────────────────────────────
