@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -19,6 +19,15 @@ const TABS = [
   { key: 'mis_listas',  label: 'Mis Listas',  authOnly: true },
   { key: 'siguiendo',   label: 'Siguiendo',   authOnly: true },
 ];
+
+const TAB_SLUGS = {
+  populares:    'populares',
+  recientes:    'recientes',
+  mas_seguidas: 'mas-seguidas',
+  mis_listas:   'mis-listas',
+  siguiendo:    'siguiendo',
+};
+const SLUG_TO_KEY = Object.fromEntries(Object.entries(TAB_SLUGS).map(([k, v]) => [v, k]));
 
 const CATEGORIES = [
   'RPG', 'Acción/Aventura', 'Terror', 'Indie',
@@ -203,9 +212,13 @@ function CreateListModal({ onClose, onCreated }) {
 
 export default function ListsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [userLoaded, setUserLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState('populares');
+  const [activeTab, setActiveTab] = useState(() => {
+    const slug = searchParams.get('tab') || 'populares';
+    return SLUG_TO_KEY[slug] || 'populares';
+  });
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -279,6 +292,7 @@ export default function ListsPage() {
       return;
     }
     setActiveTab(tab);
+    router.replace(`/lists?tab=${TAB_SLUGS[tab]}`, { scroll: false });
   }
 
   function handleLoadMore() {
