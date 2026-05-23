@@ -13,10 +13,11 @@ const anton = Anton({ weight: '400', subsets: ['latin'], display: 'swap' });
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 const TABS = [
-  { key: 'populares', label: 'Populares' },
-  { key: 'recientes', label: 'Recientes' },
+  { key: 'populares',   label: 'Populares' },
+  { key: 'recientes',   label: 'Recientes' },
   { key: 'mas_seguidas', label: 'Más Seguidas' },
-  { key: 'mis_listas', label: 'Mis Listas' },
+  { key: 'mis_listas',  label: 'Mis Listas',  authOnly: true },
+  { key: 'siguiendo',   label: 'Siguiendo',   authOnly: true },
 ];
 
 const CATEGORIES = [
@@ -232,9 +233,19 @@ export default function ListsPage() {
         const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
         if (!meRes.ok) { setLoading(false); return; }
         const { user: u } = await meRes.json();
-        const res = await fetch(`/api/users/${u.username}/lists`);
+        const res = await fetch(`/api/users/${u.username}/lists`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const data = res.ok ? await res.json() : [];
         setLists(append ? (prev) => [...prev, ...data] : data);
+        setHasMore(false);
+      } else if (tab === 'siguiendo') {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/lists/following', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = res.ok ? await res.json() : [];
+        setLists(append ? (prev) => [...prev, ...(Array.isArray(data) ? data : [])] : (Array.isArray(data) ? data : []));
         setHasMore(false);
       } else {
         const res = await fetch(`/api/lists?tab=${tab}&page=${pageNum}`);
@@ -252,7 +263,7 @@ export default function ListsPage() {
   // Load lists when tab or userLoaded changes
   useEffect(() => {
     if (!userLoaded) return;
-    if (activeTab === 'mis_listas' && !user) {
+    if ((activeTab === 'mis_listas' || activeTab === 'siguiendo') && !user) {
       router.push('/login');
       return;
     }
@@ -262,7 +273,8 @@ export default function ListsPage() {
   }, [activeTab, userLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleTabChange(tab) {
-    if (tab === 'mis_listas' && userLoaded && !user) {
+    const tabDef = TABS.find((t) => t.key === tab);
+    if (tabDef?.authOnly && userLoaded && !user) {
       router.push('/login');
       return;
     }
@@ -311,7 +323,7 @@ export default function ListsPage() {
 
         {/* Tabs */}
         <div className="flex items-center gap-0 mb-8 border-b border-[#1A1A1A]">
-          {TABS.map((tab) => (
+          {TABS.filter((tab) => !tab.authOnly || user).map((tab) => (
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
@@ -339,10 +351,18 @@ export default function ListsPage() {
             </svg>
             <div className="flex flex-col gap-1">
               <p className="text-white text-sm font-medium">
-                {activeTab === 'mis_listas' ? 'Todavía no has creado ninguna lista' : 'No hay listas disponibles'}
+                {activeTab === 'mis_listas'
+                  ? 'Todavía no has creado ninguna lista'
+                  : activeTab === 'siguiendo'
+                  ? 'Aún no sigues ninguna lista'
+                  : 'No hay listas disponibles'}
               </p>
-              <p className="text-[#71717A] text-sm">
-                {activeTab === 'mis_listas' ? '¡Crea tu primera colección de videojuegos!' : 'Vuelve más tarde o crea una nueva lista'}
+              <p className="text-[#71717A] text-sm max-w-xs mx-auto">
+                {activeTab === 'mis_listas'
+                  ? '¡Crea tu primera colección de videojuegos!'
+                  : activeTab === 'siguiendo'
+                  ? 'Explora listas de la comunidad y síguelas para guardarlas aquí.'
+                  : 'Vuelve más tarde o crea una nueva lista'}
               </p>
             </div>
             {user && activeTab === 'mis_listas' && (
@@ -351,6 +371,14 @@ export default function ListsPage() {
                 className="px-5 py-2.5 rounded-full bg-[#A855F7] text-[#0A0A0A] text-sm font-semibold hover:bg-[#9333EA] transition-colors cursor-pointer min-h-[44px]"
               >
                 Crear mi primera lista
+              </button>
+            )}
+            {activeTab === 'siguiendo' && (
+              <button
+                onClick={() => handleTabChange('populares')}
+                className="px-5 py-2.5 rounded-full border border-[#A855F7] text-[#A855F7] text-sm font-medium hover:bg-[#A855F7]/10 transition-colors cursor-pointer min-h-[44px]"
+              >
+                Explorar listas populares
               </button>
             )}
           </div>
