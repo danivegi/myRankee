@@ -13,12 +13,14 @@ const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 // ── Add game modal ────────────────────────────────────────────────────────────
 
-function AddGameModal({ listId, onClose, onAdded }) {
+function AddGameModal({ listId, onClose, onAdded, onRemoved, initialAddedIds = [] }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
-  const [adding, setAdding] = useState(null);
+  const [loading, setLoading] = useState(null);
   const [error, setError] = useState('');
+  const [addedIds, setAddedIds] = useState(() => new Set(initialAddedIds));
+  const [hoveredId, setHoveredId] = useState(null);
 
   async function handleSearch(q) {
     setQuery(q);
@@ -37,7 +39,7 @@ function AddGameModal({ listId, onClose, onAdded }) {
 
   async function handleAdd(game) {
     const token = localStorage.getItem('token');
-    setAdding(game.id);
+    setLoading(game.id);
     setError('');
     try {
       const res = await fetch(`/api/lists/${listId}/games`, {
@@ -47,11 +49,32 @@ function AddGameModal({ listId, onClose, onAdded }) {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Error al añadir el juego'); return; }
+      setAddedIds((prev) => new Set([...prev, game.id]));
       onAdded({ igdb_game_id: game.id, name: game.name, cover: game.cover });
     } catch {
       setError('Error al añadir el juego');
     } finally {
-      setAdding(null);
+      setLoading(null);
+    }
+  }
+
+  async function handleRemove(game) {
+    const token = localStorage.getItem('token');
+    setLoading(game.id);
+    try {
+      const res = await fetch(`/api/lists/${listId}/games`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ igdb_game_id: game.id }),
+      });
+      if (!res.ok) return;
+      setAddedIds((prev) => { const next = new Set(prev); next.delete(game.id); return next; });
+      setHoveredId(null);
+      onRemoved(game.id);
+    } catch {
+      // fail silently
+    } finally {
+      setLoading(null);
     }
   }
 
@@ -85,29 +108,52 @@ function AddGameModal({ listId, onClose, onAdded }) {
         {error && <p className="text-red-400 text-sm">{error}</p>}
 
         <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
-          {results.map((game) => (
-            <div
-              key={game.id}
-              className="flex items-center gap-3 p-3 rounded-lg border border-[#1A1A1A] hover:border-[#A855F7] transition-colors"
-            >
-              <div className="relative w-10 h-14 rounded overflow-hidden bg-[#141414] flex-shrink-0">
-                {game.cover && (
-                  <Image src={game.cover} alt={game.name} fill className="object-cover" sizes="40px" />
+          {results.map((game) => {
+            const isAdded = addedIds.has(game.id);
+            const isHovered = hoveredId === game.id;
+            const isLoading = loading === game.id;
+            return (
+              <div
+                key={game.id}
+                className="flex items-center gap-3 p-3 rounded-lg border border-[#1A1A1A] hover:border-[#A855F7] transition-colors"
+              >
+                <div className="relative w-10 h-14 rounded overflow-hidden bg-[#141414] flex-shrink-0">
+                  {game.cover && (
+                    <Image src={game.cover} alt={game.name} fill className="object-cover" sizes="40px" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-medium truncate">{game.name}</p>
+                  {game.year && <p className="text-[#71717A] text-xs font-mono">{game.year}</p>}
+                </div>
+                {isLoading ? (
+                  <button disabled className="flex-shrink-0 px-3 py-1.5 rounded-full border border-[#3A3A3A] text-[#71717A] text-xs font-semibold opacity-50 cursor-not-allowed w-[72px] text-center">
+                    ...
+                  </button>
+                ) : isAdded ? (
+                  <button
+                    onClick={() => handleRemove(game)}
+                    onMouseEnter={() => setHoveredId(game.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer w-[72px] text-center ${
+                      isHovered
+                        ? 'border border-[#EF4444] text-[#EF4444] bg-[#EF4444]/10'
+                        : 'border border-[#3A3A3A] text-[#71717A]'
+                    }`}
+                  >
+                    {isHovered ? 'Quitar' : 'Añadido'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleAdd(game)}
+                    className="flex-shrink-0 px-3 py-1.5 rounded-full bg-[#A855F7] text-[#0A0A0A] text-xs font-semibold hover:bg-[#9333EA] transition-colors cursor-pointer w-[72px] text-center"
+                  >
+                    Añadir
+                  </button>
                 )}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-medium truncate">{game.name}</p>
-                {game.year && <p className="text-[#71717A] text-xs font-mono">{game.year}</p>}
-              </div>
-              <button
-                onClick={() => handleAdd(game)}
-                disabled={adding === game.id}
-                className="flex-shrink-0 px-3 py-1.5 rounded-full bg-[#A855F7] text-[#0A0A0A] text-xs font-semibold hover:bg-[#9333EA] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
-              >
-                {adding === game.id ? '...' : 'Añadir'}
-              </button>
-            </div>
-          ))}
+            );
+          })}
           {query && !searching && results.length === 0 && (
             <p className="text-[#71717A] text-sm text-center py-6">No se encontraron juegos.</p>
           )}
@@ -310,6 +356,14 @@ export default function ListDetailPage({ params }) {
       ...prev,
       games: [...prev.games, game],
       games_count: prev.games_count + 1,
+    }));
+  }
+
+  function handleGameRemoved(igdbId) {
+    setList((prev) => ({
+      ...prev,
+      games: prev.games.filter((g) => g.igdb_game_id !== igdbId),
+      games_count: prev.games_count - 1,
     }));
   }
 
@@ -548,7 +602,9 @@ export default function ListDetailPage({ params }) {
         <AddGameModal
           listId={id}
           onClose={() => setAddGameOpen(false)}
-          onAdded={(game) => { handleGameAdded(game); }}
+          onAdded={handleGameAdded}
+          onRemoved={handleGameRemoved}
+          initialAddedIds={list.games.map((g) => g.igdb_game_id)}
         />
       )}
 
