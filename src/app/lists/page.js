@@ -67,10 +67,12 @@ function ListCard({ list, tall }) {
 
         <div className="flex items-center justify-between mt-1">
           {/* Creator */}
-          <div className="flex items-center gap-1.5">
-            <Avatar user={list.creator} size={20} />
-            <span className="text-[#71717A] text-[11px]">@{list.creator.username}</span>
-          </div>
+          {list.creator && (
+            <div className="flex items-center gap-1.5">
+              <Avatar user={list.creator} size={20} />
+              <span className="text-[#71717A] text-[11px]">@{list.creator.username}</span>
+            </div>
+          )}
 
           {/* Stats */}
           <div className="flex items-center gap-3 text-[#71717A] text-[11px] font-mono">

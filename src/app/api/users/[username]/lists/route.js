@@ -25,6 +25,7 @@ export async function GET(request, { params }) {
 
   const result = await pool.query(
     `SELECT l.id, l.title, l.description, l.is_public, l.followers_count, l.created_at,
+            u.username, u.nombre, u.apellido, u.avatar_url,
             COUNT(lg.id)::int AS games_count,
             ARRAY(
               SELECT lg2.igdb_game_id FROM list_games lg2
@@ -33,9 +34,10 @@ export async function GET(request, { params }) {
               LIMIT 4
             ) AS cover_game_ids
      FROM lists l
+     JOIN users u ON u.id = l.user_id
      LEFT JOIN list_games lg ON lg.list_id = l.id
      WHERE l.user_id = $1${isOwner ? '' : ' AND l.is_public = true'}
-     GROUP BY l.id
+     GROUP BY l.id, u.username, u.nombre, u.apellido, u.avatar_url
      ORDER BY l.created_at DESC`,
     [userId]
   );
@@ -69,6 +71,12 @@ export async function GET(request, { params }) {
         followers_count: list.followers_count,
         games_count:     list.games_count,
         created_at:      list.created_at,
+        creator: {
+          username:   list.username,
+          nombre:     list.nombre,
+          apellido:   list.apellido,
+          avatar_url: list.avatar_url,
+        },
         covers,
       };
     })

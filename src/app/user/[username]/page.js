@@ -121,6 +121,8 @@ const SORT_OPTIONS = [
 
 const STATUS_COLORS = { pendiente: '#A855F7', jugando: '#3B82F6', jugado: '#10B981' };
 
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
 function IconGrid({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -339,19 +341,25 @@ function BacklogListRow({ item, isOwner, onStatusChange, onRemove }) {
 
 function BacklogTab({ username, isOwner, token }) {
   const [items,        setItems]        = useState([]);
-  const [counts,       setCounts]       = useState({ jugado: 0, jugando: 0, pendiente: 0 });
   const [activeStatus, setActiveStatus] = useState('pendiente');
   const [sort,         setSort]         = useState('recent');
   const [viewMode,     setViewMode]     = useState('grid');
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState(false);
 
+  // Derive counts from items — single source of truth, never out of sync
+  const counts = {
+    pendiente: items.filter((i) => i.status === 'pendiente').length,
+    jugando:   items.filter((i) => i.status === 'jugando').length,
+    jugado:    items.filter((i) => i.status === 'jugado').length,
+  };
+
   useEffect(() => {
     setLoading(true);
     setError(false);
     fetch(`/api/users/${username}/backlog`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((data) => { setItems(data.items); setCounts(data.counts); })
+      .then((data) => setItems(data.items))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [username]);
@@ -378,16 +386,7 @@ function BacklogTab({ username, isOwner, token }) {
       body: JSON.stringify({ igdb_game_id: igdbId, status: newStatus }),
     });
     if (!res.ok) return;
-    setItems((prev) => {
-      const old = prev.find((i) => i.igdb_game_id === igdbId);
-      if (!old) return prev;
-      setCounts((c) => ({
-        ...c,
-        [old.status]: Math.max(0, c[old.status] - 1),
-        [newStatus]:  (c[newStatus] ?? 0) + 1,
-      }));
-      return prev.map((i) => i.igdb_game_id === igdbId ? { ...i, status: newStatus } : i);
-    });
+    setItems((prev) => prev.map((i) => i.igdb_game_id === igdbId ? { ...i, status: newStatus } : i));
   }
 
   async function handleRemove(igdbId) {
@@ -398,11 +397,7 @@ function BacklogTab({ username, isOwner, token }) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
       body: JSON.stringify({ igdb_game_id: igdbId }),
     });
-    setItems((prev) => {
-      const old = prev.find((i) => i.igdb_game_id === igdbId);
-      if (old) setCounts((c) => ({ ...c, [old.status]: Math.max(0, c[old.status] - 1) }));
-      return prev.filter((i) => i.igdb_game_id !== igdbId);
-    });
+    setItems((prev) => prev.filter((i) => i.igdb_game_id !== igdbId));
   }
 
   const EMPTY_MESSAGES = {
@@ -434,7 +429,7 @@ function BacklogTab({ username, isOwner, token }) {
       <div className="flex flex-col items-center gap-4 py-20 text-center">
         <p className="text-[#71717A] text-sm">No se pudo cargar el backlog.</p>
         <button
-          onClick={() => { setError(false); setLoading(true); fetch(`/api/users/${username}/backlog`).then((r) => r.ok ? r.json() : Promise.reject()).then((d) => { setItems(d.items); setCounts(d.counts); }).catch(() => setError(true)).finally(() => setLoading(false)); }}
+          onClick={() => { setError(false); setLoading(true); fetch(`/api/users/${username}/backlog`).then((r) => r.ok ? r.json() : Promise.reject()).then((d) => setItems(d.items)).catch(() => setError(true)).finally(() => setLoading(false)); }}
           className="px-4 py-2 rounded-full border border-[#1A1A1A] text-[#71717A] text-sm hover:text-white hover:border-[#3F3F46] transition-colors cursor-pointer"
         >
           Reintentar
@@ -443,7 +438,7 @@ function BacklogTab({ username, isOwner, token }) {
     );
   }
 
-  const totalBacklog = counts.jugado + counts.jugando + counts.pendiente;
+  const totalBacklog = items.length;
 
   if (totalBacklog === 0) {
     return (
@@ -1641,6 +1636,62 @@ function FollowModal({ title, users, loading, token, viewerUsername, onClose }) 
   );
 }
 
+// ── Diary ─────────────────────────────────────────────────────────────────────
+
+function DiaryEntryRow({ entry }) {
+  const date = new Date(entry.created_at);
+  const day  = date.getDate();
+  const formattedDate = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  return (
+    <div className="flex items-center gap-3 sm:gap-4 py-3 border-b border-[#1A1A1A] group">
+      {/* Day badge */}
+      <div className="w-7 flex-shrink-0 text-right">
+        <span className="text-[#3F3F46] group-hover:text-[#71717A] font-mono text-sm font-bold transition-colors">
+          {day}
+        </span>
+      </div>
+
+      {/* Cover */}
+      <Link href={`/game/${entry.igdb_game_id}`} className="flex-shrink-0">
+        <div className="relative w-9 h-12 rounded overflow-hidden bg-[#141414] hover:opacity-80 transition-opacity">
+          {entry.cover ? (
+            <Image src={entry.cover} alt={entry.name ?? ''} fill sizes="36px" className="object-cover" />
+          ) : (
+            <div className="w-full h-full bg-[#1A1A1A] flex items-center justify-center">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="6" width="20" height="12" rx="2"/>
+              </svg>
+            </div>
+          )}
+        </div>
+      </Link>
+
+      {/* Game name */}
+      <div className="flex-1 min-w-0">
+        <Link
+          href={`/game/${entry.igdb_game_id}`}
+          className="text-white text-sm font-semibold hover:text-[#A855F7] transition-colors line-clamp-1 leading-snug"
+        >
+          {entry.name ?? `Juego #${entry.igdb_game_id}`}
+        </Link>
+      </div>
+
+      {/* Stars */}
+      <div className="flex-shrink-0">
+        <StarRating value={entry.score} size={12} />
+      </div>
+
+      {/* Full date — hidden on mobile */}
+      <div className="hidden sm:block flex-shrink-0 w-28 text-right">
+        <span className="text-[#3F3F46] group-hover:text-[#71717A] text-[11px] font-mono transition-colors">
+          {formattedDate}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function UserProfilePage({ params }) {
@@ -1736,6 +1787,23 @@ export default function UserProfilePage({ params }) {
         return arr;
     }
   }, [reviews, reviewsSort]);
+
+  // Diary: group ratings by month (ratings already DESC from API)
+  const diaryGroups = useMemo(() => {
+    if (!ratings.length) return [];
+    const groups = [];
+    let current = null;
+    for (const entry of ratings) {
+      const d   = new Date(entry.created_at);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      if (!current || current.key !== key) {
+        current = { key, label: `${MESES[d.getMonth()]} ${d.getFullYear()}`, entries: [] };
+        groups.push(current);
+      }
+      current.entries.push(entry);
+    }
+    return groups;
+  }, [ratings]);
 
   useEffect(() => {
     if (!username) return;
@@ -2311,13 +2379,42 @@ export default function UserProfilePage({ params }) {
 
         {/* Diario tab */}
         {activeTab === 'Diario' && (
-          <div key="tab-diario" className="tab-content flex flex-col items-center gap-4 py-20 text-center pb-10">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-            <p className="text-white text-sm font-medium">Próximamente</p>
-            <p className="text-[#71717A] text-sm">El diario de juego del usuario aparecerá aquí</p>
+          <div key="tab-diario" className="tab-content pb-10">
+            {ratings.length === 0 ? (
+              <div className="flex flex-col items-center gap-4 py-20 text-center">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <div className="flex flex-col gap-1">
+                  <p className="text-white text-sm font-medium">
+                    {isOwner ? 'Tu diario está vacío' : 'Este usuario aún no tiene actividad en su diario'}
+                  </p>
+                  {isOwner && (
+                    <p className="text-[#71717A] text-sm">
+                      <Link href="/search" className="text-[#A855F7] hover:underline">Puntúa juegos</Link>
+                      {' '}para registrar tu actividad
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-8">
+                {diaryGroups.map((group) => (
+                  <div key={group.key}>
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className={`${anton.className} text-white text-xl`}>{group.label}</h3>
+                      <span className="text-[#3F3F46] text-xs font-mono">{group.entries.length}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      {group.entries.map((entry) => (
+                        <DiaryEntryRow key={`${entry.igdb_game_id}-${entry.created_at}`} entry={entry} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

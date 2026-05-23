@@ -708,8 +708,19 @@ function SettingsContent() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
         {/* Page header */}
         <div className="mb-8 flex items-center gap-3">
-          <Link href={`/user/${user?.username}`} className="text-[#71717A] hover:text-white transition-colors text-sm">
-            ← Volver al perfil
+          <Link
+            href={`/user/${user?.username}`}
+            className="group inline-flex items-center gap-1.5 text-[#71717A] hover:text-white transition-colors duration-200 text-sm"
+          >
+            <svg
+              width="15" height="15" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              className="transition-transform duration-200 group-hover:-translate-x-1"
+            >
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
+            Volver al perfil
           </Link>
         </div>
         <h1 className={`${anton.className} text-white text-3xl sm:text-4xl mb-8`}>Configuración</h1>
