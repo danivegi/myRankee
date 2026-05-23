@@ -1128,6 +1128,229 @@ function ProfileListCard({ list }) {
   );
 }
 
+// ── Favoritos components ──────────────────────────────────────────────────────
+
+function Top5Slot({ game, position, isOwner, onPickSlot, onRemove }) {
+  const [hovering, setHovering] = useState(false);
+
+  if (!game) {
+    return (
+      <div className="flex flex-col gap-2 flex-1 min-w-0">
+        <div
+          className="relative rounded-lg overflow-hidden"
+          style={{ aspectRatio: '3/4', backgroundColor: '#141414', border: '2px dashed #2A2A2A' }}
+        >
+          {isOwner && (
+            <button
+              onClick={() => onPickSlot(position)}
+              className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#3F3F46] hover:text-[#A855F7] hover:border-[#A855F7] transition-colors cursor-pointer w-full"
+              style={{ border: 'none', background: 'none' }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              <span className="text-[10px] font-mono">{position}</span>
+            </button>
+          )}
+          {!isOwner && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-[#2A2A2A] font-bold text-2xl font-mono">{position}</span>
+            </div>
+          )}
+        </div>
+        <div className="h-4" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 flex-1 min-w-0">
+      <div
+        className="relative rounded-lg overflow-hidden cursor-pointer"
+        style={{ aspectRatio: '3/4' }}
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
+      >
+        <Link href={`/game/${game.igdb_game_id}`} className="absolute inset-0 block">
+          {game.cover ? (
+            <Image src={game.cover} alt={game.name ?? ''} fill sizes="20vw" className="object-cover" />
+          ) : (
+            <div className="w-full h-full bg-[#1A1A1A] flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="6" width="20" height="12" rx="2"/><path d="M9.5 9.5v5M7 12h5M17 12h.01"/>
+              </svg>
+            </div>
+          )}
+        </Link>
+
+        {/* Position badge */}
+        <div className="absolute top-1.5 left-1.5 w-5 h-5 rounded bg-black/70 flex items-center justify-center pointer-events-none">
+          <span className="text-white text-[10px] font-bold font-mono">{position}</span>
+        </div>
+
+        {/* Hover overlay (owner only) */}
+        {isOwner && (
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-2 transition-opacity duration-150"
+            style={{ backgroundColor: 'rgba(0,0,0,0.75)', opacity: hovering ? 1 : 0, pointerEvents: hovering ? 'auto' : 'none' }}
+          >
+            <p className="text-white text-[10px] font-mono text-center px-2 line-clamp-2">{game.name}</p>
+            <button
+              onClick={() => onRemove(position)}
+              className="flex items-center gap-1 text-red-400 hover:text-red-300 text-[10px] transition-colors cursor-pointer"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              Quitar
+            </button>
+          </div>
+        )}
+      </div>
+
+      <Link href={`/game/${game.igdb_game_id}`} className="text-white text-[11px] font-semibold line-clamp-2 leading-snug hover:text-[#A855F7] transition-colors">
+        {game.name ?? `#${game.igdb_game_id}`}
+      </Link>
+    </div>
+  );
+}
+
+function FavCard({ fav, isOwner, onRemove }) {
+  const [hovering, setHovering] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div
+        className="relative rounded-lg overflow-hidden"
+        style={{ aspectRatio: '3/4' }}
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
+      >
+        <Link href={`/game/${fav.igdb_game_id}`} className="absolute inset-0 block">
+          {fav.cover ? (
+            <Image src={fav.cover} alt={fav.name ?? ''} fill sizes="(max-width: 768px) 33vw, 20vw" className="object-cover" />
+          ) : (
+            <div className="w-full h-full bg-[#1A1A1A] flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="6" width="20" height="12" rx="2"/><path d="M9.5 9.5v5M7 12h5M17 12h.01"/>
+              </svg>
+            </div>
+          )}
+        </Link>
+
+        {isOwner && (
+          <div
+            className="absolute inset-0 flex items-center justify-center transition-opacity duration-150"
+            style={{ backgroundColor: 'rgba(0,0,0,0.7)', opacity: hovering ? 1 : 0, pointerEvents: hovering ? 'auto' : 'none' }}
+          >
+            <button
+              onClick={() => onRemove(fav.igdb_game_id)}
+              className="flex flex-col items-center gap-1 text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor" />
+              </svg>
+              <span className="text-[10px] font-mono">Quitar</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      <Link href={`/game/${fav.igdb_game_id}`} className="text-white text-[11px] font-semibold line-clamp-2 leading-snug hover:text-[#A855F7] transition-colors">
+        {fav.name ?? `#${fav.igdb_game_id}`}
+      </Link>
+      {fav.year && <span className="text-[#71717A] text-[10px] font-mono">{fav.year}</span>}
+    </div>
+  );
+}
+
+function TopGamePickModal({ topGames, onSelect, onClose }) {
+  const [query,   setQuery]   = useState('');
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const timerRef = useRef(null);
+
+  const occupiedIds = new Set(topGames.map((g) => g.igdb_game_id));
+
+  useEffect(() => {
+    if (!query.trim()) { setResults([]); return; }
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(`/api/games/search?q=${encodeURIComponent(query.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          setResults(Array.isArray(data) ? data.filter((g) => !occupiedIds.has(g.id)) : []);
+        }
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 350);
+    return () => clearTimeout(timerRef.current);
+  }, [query]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl border border-[#1A1A1A] flex flex-col gap-4 p-6"
+        style={{ backgroundColor: '#111111', maxHeight: '80vh' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className={`${anton.className} text-white text-xl`}>Elegir juego</h2>
+          <button onClick={onClose} className="text-[#71717A] hover:text-white transition-colors cursor-pointer">
+            <IconX size={18} />
+          </button>
+        </div>
+
+        <input
+          autoFocus
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar juego..."
+          className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-[#71717A] focus:outline-none focus:border-[#A855F7] transition-colors"
+        />
+
+        <div className="overflow-y-auto flex-1 min-h-0 flex flex-col gap-1" style={{ maxHeight: '50vh' }}>
+          {searching ? (
+            <div className="flex justify-center py-6">
+              <div className="w-5 h-5 rounded-full border-2 border-[#A855F7] border-t-transparent animate-spin" />
+            </div>
+          ) : results.length === 0 && query.trim() ? (
+            <p className="text-[#71717A] text-sm text-center py-6">Sin resultados</p>
+          ) : results.length === 0 ? (
+            <p className="text-[#71717A] text-sm text-center py-6">Empieza a escribir para buscar</p>
+          ) : (
+            results.map((game) => (
+              <button
+                key={game.id}
+                onClick={() => { onSelect(game); onClose(); }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#1A1A1A] transition-colors cursor-pointer text-left w-full"
+              >
+                <div className="relative w-9 h-12 rounded overflow-hidden flex-shrink-0 bg-[#141414]">
+                  {game.cover && <Image src={game.cover} alt={game.name} fill sizes="36px" className="object-cover" />}
+                </div>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span className="text-white text-sm font-semibold line-clamp-1">{game.name}</span>
+                  {game.year && <span className="text-[#71717A] text-[11px] font-mono">{game.year}</span>}
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function ReviewCard({ review, token, viewerUsername, reviewAuthorUsername }) {
@@ -1450,6 +1673,13 @@ export default function UserProfilePage({ params }) {
   const [listsLoading, setListsLoading] = useState(false);
   const [listsLoaded,  setListsLoaded]  = useState(false);
 
+  // Favoritos tab state (lazy-loaded)
+  const [favorites,        setFavorites]        = useState([]);
+  const [topGames,         setTopGames]         = useState([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [favoritesLoaded,  setFavoritesLoaded]  = useState(false);
+  const [pickSlot,         setPickSlot]         = useState(null); // position 1-5 being picked
+
   // Sort state for Juegos and Reseñas tabs
   const [ratingsSort, setRatingsSort] = useState('recent');
   const [reviewsSort, setReviewsSort] = useState('recent');
@@ -1524,12 +1754,13 @@ export default function UserProfilePage({ params }) {
         setIsFollowing(user.is_following ?? false);
         setFollowersCount(user.total_followers ?? 0);
 
-        const [revRes, ratRes, achRes] = await Promise.all([
+        const [revRes, ratRes, achRes, topRes] = await Promise.all([
           fetch(`/api/users/${username}/reviews`, { headers: t ? { Authorization: `Bearer ${t}` } : {} }),
           fetch(`/api/users/${username}/ratings`),
           fetch(`/api/users/${username}/achievements`, {
             headers: t ? { Authorization: `Bearer ${t}` } : {},
           }),
+          fetch(`/api/users/${username}/top-games`),
         ]);
         if (revRes.ok) setReviews(await revRes.json());
         if (ratRes.ok) setRatings(await ratRes.json());
@@ -1537,6 +1768,7 @@ export default function UserProfilePage({ params }) {
           const achData = await achRes.json();
           setAchievements(achData.achievements ?? []);
         }
+        if (topRes.ok) setTopGames(await topRes.json());
 
         if (t) {
           const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${t}` } });
@@ -1583,6 +1815,53 @@ export default function UserProfilePage({ params }) {
       .catch(() => setLists([]))
       .finally(() => { setListsLoading(false); setListsLoaded(true); });
   }, [activeTab, listsLoaded, loading, username, token]);
+
+  // Lazy-load favorites when Favoritos tab is first opened
+  useEffect(() => {
+    if (activeTab !== 'Favoritos' || favoritesLoaded || loading) return;
+    setFavoritesLoading(true);
+    fetch(`/api/users/${username}/favorites`)
+      .then((r) => r.ok ? r.json() : []).catch(() => [])
+      .then((favs) => setFavorites(Array.isArray(favs) ? favs : []))
+      .finally(() => { setFavoritesLoading(false); setFavoritesLoaded(true); });
+  }, [activeTab, favoritesLoaded, loading, username]);
+
+  async function handleSetTopGame(game, position) {
+    const t = token ?? localStorage.getItem('token');
+    if (!t) return;
+    const res = await fetch('/api/favorites/top', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+      body: JSON.stringify({ igdb_game_id: game.id, position }),
+    });
+    if (res.ok) {
+      setTopGames((prev) => {
+        const filtered = prev.filter((g) => g.position !== position);
+        return [...filtered, { igdb_game_id: game.id, position, name: game.name, cover: game.cover, year: game.year }]
+          .sort((a, b) => a.position - b.position);
+      });
+    }
+  }
+
+  async function handleRemoveTopGame(position) {
+    const t = token ?? localStorage.getItem('token');
+    if (!t) return;
+    const res = await fetch(`/api/favorites/top/${position}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${t}` },
+    });
+    if (res.ok) setTopGames((prev) => prev.filter((g) => g.position !== position));
+  }
+
+  async function handleRemoveFavorite(igdbGameId) {
+    const t = token ?? localStorage.getItem('token');
+    if (!t) return;
+    const res = await fetch(`/api/favorites/${igdbGameId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${t}` },
+    });
+    if (res.ok) setFavorites((prev) => prev.filter((f) => f.igdb_game_id !== igdbGameId));
+  }
 
   async function handleFollow() {
     if (!token) return;
@@ -1763,6 +2042,45 @@ export default function UserProfilePage({ params }) {
         </div>
       </div>
 
+      {/* ── Top 5 Showcase ── */}
+      {(isOwner || topGames.length > 0) && (
+        <div className="px-4 md:px-12 py-5 border-b border-[#1A1A1A]">
+          <div className="flex flex-col gap-3">
+            <span className={`${anton.className} text-white text-lg`}>Top 5</span>
+            <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-1">
+              {isOwner ? (
+                [1, 2, 3, 4, 5].map((pos) => {
+                  const game = topGames.find((g) => g.position === pos) ?? null;
+                  return (
+                    <div key={pos} className="w-16 sm:w-[90px] md:w-[108px] flex-shrink-0">
+                      <Top5Slot
+                        game={game}
+                        position={pos}
+                        isOwner={true}
+                        onPickSlot={setPickSlot}
+                        onRemove={handleRemoveTopGame}
+                      />
+                    </div>
+                  );
+                })
+              ) : (
+                topGames.map((game) => (
+                  <div key={game.position} className="w-16 sm:w-[90px] md:w-[108px] flex-shrink-0">
+                    <Top5Slot
+                      game={game}
+                      position={game.position}
+                      isOwner={false}
+                      onPickSlot={() => {}}
+                      onRemove={() => {}}
+                    />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Tabs + Content ── */}
       <div className="flex flex-col gap-6 px-12">
 
@@ -1936,12 +2254,44 @@ export default function UserProfilePage({ params }) {
 
         {/* Favoritos tab */}
         {activeTab === 'Favoritos' && (
-          <div key="tab-favoritos" className="tab-content flex flex-col items-center gap-4 py-20 text-center pb-10">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-            </svg>
-            <p className="text-white text-sm font-medium">Próximamente</p>
-            <p className="text-[#71717A] text-sm">Los juegos favoritos del usuario aparecerán aquí</p>
+          <div key="tab-favoritos" className="tab-content pb-10">
+            {favoritesLoading ? (
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="flex flex-col gap-2">
+                    <div className="skeleton-shimmer rounded-lg" style={{ aspectRatio: '3/4' }} />
+                    <div className="skeleton-shimmer h-3 w-3/4 rounded" />
+                  </div>
+                ))}
+              </div>
+            ) : favorites.length === 0 ? (
+              <div className="flex flex-col items-center gap-4 py-20 text-center">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                <div className="flex flex-col gap-1">
+                  <p className="text-white text-sm font-medium">
+                    {isOwner ? 'Aún no tienes juegos favoritos' : 'Este usuario aún no tiene favoritos'}
+                  </p>
+                  {isOwner && (
+                    <p className="text-[#71717A] text-sm">
+                      Usa el botón <span className="text-[#EF4444]">♥ Favorito</span> en cualquier juego para añadirlo
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                {favorites.map((fav) => (
+                  <FavCard
+                    key={fav.igdb_game_id}
+                    fav={fav}
+                    isOwner={isOwner}
+                    onRemove={handleRemoveFavorite}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -1982,6 +2332,15 @@ export default function UserProfilePage({ params }) {
           token={token}
           viewerUsername={viewerUsername}
           onClose={() => setModalType(null)}
+        />
+      )}
+
+      {/* ── Top game pick modal ── */}
+      {pickSlot !== null && (
+        <TopGamePickModal
+          topGames={topGames}
+          onSelect={(game) => handleSetTopGame(game, pickSlot)}
+          onClose={() => setPickSlot(null)}
         />
       )}
 

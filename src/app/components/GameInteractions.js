@@ -414,6 +414,9 @@ export default function GameInteractions({ gameId, gameData }) {
   const [likesMap,      setLikesMap]          = useState({});
   const [heartAnimMap,  setHeartAnimMap]      = useState({});
   const [likingMap,     setLikingMap]         = useState({});
+  const [favorited,     setFavorited]         = useState(false);
+  const [favLoading,    setFavLoading]        = useState(false);
+  const [favAnim,       setFavAnim]           = useState(false);
 
   async function loadStats() {
     const res = await fetch(`/api/games/${gameId}/stats`);
@@ -454,6 +457,18 @@ export default function GameInteractions({ gameId, gameData }) {
     }
   }
 
+  async function loadFavorite() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const res = await fetch(`/api/favorites/check/${gameId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setFavorited(data.favorited);
+    }
+  }
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -466,6 +481,7 @@ export default function GameInteractions({ gameId, gameData }) {
       await loadStats();
       await loadReviews();
       await loadBacklog();
+      await loadFavorite();
     })();
   }, [gameId]);
 
@@ -543,6 +559,38 @@ export default function GameInteractions({ gameId, gameData }) {
     });
   }
 
+  async function handleFavoriteToggle() {
+    requireAuth(async () => {
+      const token = localStorage.getItem('token');
+      if (favLoading) return;
+      const newFav = !favorited;
+      setFavorited(newFav);
+      setFavAnim(true);
+      setTimeout(() => setFavAnim(false), 600);
+      setFavLoading(true);
+      try {
+        if (newFav) {
+          await fetch('/api/favorites', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ igdb_game_id: gameId }),
+          });
+          addToast('Añadido a favoritos ♥');
+        } else {
+          await fetch(`/api/favorites/${gameId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          addToast('Eliminado de favoritos');
+        }
+      } catch {
+        setFavorited(!newFav);
+      } finally {
+        setFavLoading(false);
+      }
+    });
+  }
+
   function handleRateClick() {
     requireAuth(() => setModalOpen(true));
   }
@@ -595,6 +643,29 @@ export default function GameInteractions({ gameId, gameData }) {
         >
           <IconShare size={15} />
           Compartir
+        </button>
+
+        <button
+          onClick={handleFavoriteToggle}
+          disabled={favLoading}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-full border text-sm transition-colors cursor-pointer disabled:opacity-50 ${
+            favorited
+              ? 'border-[#EF4444]/50 text-[#EF4444] bg-[#EF4444]/10 hover:bg-[#EF4444]/20'
+              : 'border-[#1A1A1A] text-white hover:bg-[#1A1A1A]'
+          }`}
+        >
+          <span className="relative inline-flex items-center justify-center">
+            <span className={favAnim ? 'heart-burst' : ''}>
+              <IconHeart size={15} filled={favorited} color={favorited ? '#EF4444' : 'currentColor'} />
+            </span>
+            {favAnim && (
+              <span
+                className="heart-ring absolute inset-[-4px] rounded-full pointer-events-none"
+                style={{ border: `2px solid ${favorited ? '#EF4444' : '#888'}` }}
+              />
+            )}
+          </span>
+          {favorited ? 'En favoritos' : 'Favorito'}
         </button>
 
         <button
