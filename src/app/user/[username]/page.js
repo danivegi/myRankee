@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo, use } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -101,7 +102,19 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-const TABS = ['Reseñas', 'Juegos', 'Listas', 'Backlog', 'Favoritos', 'Estadísticas', 'Logros', 'Diario'];
+const TABS = ['Juegos', 'Reseñas', 'Listas', 'Backlog', 'Favoritos', 'Diario', 'Logros', 'Estadísticas'];
+
+const TAB_SLUGS = {
+  'Juegos':       'juegos',
+  'Reseñas':      'resenas',
+  'Listas':       'listas',
+  'Backlog':      'backlog',
+  'Favoritos':    'favoritos',
+  'Diario':       'diario',
+  'Logros':       'logros',
+  'Estadísticas': 'estadisticas',
+};
+const SLUG_TO_TAB = Object.fromEntries(Object.entries(TAB_SLUGS).map(([k, v]) => [v, k]));
 
 // ── Backlog tab ───────────────────────────────────────────────────────────────
 
@@ -1696,7 +1709,12 @@ function DiaryEntryRow({ entry }) {
 
 export default function UserProfilePage({ params }) {
   const { username } = use(params);
-  const [activeTab,      setActiveTab]      = useState('Reseñas');
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const [activeTab,      setActiveTab]      = useState(() => {
+    const slug = searchParams.get('tab') || 'juegos';
+    return SLUG_TO_TAB[slug] || 'Juegos';
+  });
   const tabListRef     = useRef(null);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const [profile,        setProfile]        = useState(null);
@@ -1845,7 +1863,6 @@ export default function UserProfilePage({ params }) {
             setViewerUsername(me.username);
             if (me.username === username) {
               setIsOwner(true);
-              setActiveTab('Estadísticas');
             }
           }
         }
@@ -1858,6 +1875,11 @@ export default function UserProfilePage({ params }) {
 
     load();
   }, [username]);
+
+  function handleTabChange(tab) {
+    setActiveTab(tab);
+    router.replace(`/user/${username}?tab=${TAB_SLUGS[tab]}`, { scroll: false });
+  }
 
   function updateIndicator(tab) {
     const list = tabListRef.current;
@@ -1988,7 +2010,7 @@ export default function UserProfilePage({ params }) {
   const stats = [
     { value: profile.total_ratings,   label: 'Juegos',     onClick: null },
     { value: profile.total_reviews,   label: 'Reseñas',    onClick: null },
-    { value: profile.total_backlog,   label: 'Backlog',    onClick: () => setActiveTab('Backlog') },
+    { value: profile.total_backlog,   label: 'Backlog',    onClick: () => handleTabChange('Backlog') },
     { value: followersCount,          label: 'Seguidores', onClick: () => openModal('followers') },
     { value: profile.total_following, label: 'Siguiendo',  onClick: () => openModal('following') },
   ];
@@ -2048,7 +2070,7 @@ export default function UserProfilePage({ params }) {
             {/* Mini achievements preview */}
             {recentAchievements.length > 0 && (
               <button
-                onClick={() => setActiveTab('Logros')}
+                onClick={() => handleTabChange('Logros')}
                 className="flex items-center gap-2 group cursor-pointer"
               >
                 <div className="flex items-center gap-1">
@@ -2168,7 +2190,7 @@ export default function UserProfilePage({ params }) {
               <button
                 key={tab}
                 data-tab={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => handleTabChange(tab)}
                 className={[
                   'px-6 py-3 text-sm transition-colors cursor-pointer whitespace-nowrap flex-shrink-0',
                   active ? 'text-white font-semibold' : 'text-[#71717A] hover:text-white font-normal',
