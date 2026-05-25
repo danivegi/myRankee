@@ -18,7 +18,7 @@ const DISPOSABLE_DOMAINS = new Set([
 ]);
 
 const BANNED_USERNAMES = new Set([
-  'admin','administrator','mod','moderator','myrankee','support','staff',
+  'admin','administrator','mod','moderator','support','staff',
   'system','root','superuser','null','undefined','anonymous','guest',
   'bot','spam','test','abuse','security','api','www','mail',
 ]);
