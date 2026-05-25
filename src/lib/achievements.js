@@ -29,40 +29,45 @@ export async function ensureAchievementsTable() {
 
 const ACHIEVEMENTS = [
   // ratings_count
-  { code: 'rate_1',     title: 'Primer impacto',          description: 'Puntúa tu primer juego',                  tier: 'bronce',    requirement_type: 'ratings_count',   is_secret: false, requirement_value: 1   },
-  { code: 'rate_10',    title: 'Crítico en ciernes',       description: 'Puntúa 10 juegos',                        tier: 'bronce',    requirement_type: 'ratings_count',   is_secret: false, requirement_value: 10  },
-  { code: 'rate_25',    title: 'Aficionado serio',         description: 'Puntúa 25 juegos',                        tier: 'plata',     requirement_type: 'ratings_count',   is_secret: false, requirement_value: 25  },
-  { code: 'rate_50',    title: 'Crítico experto',          description: 'Puntúa 50 juegos',                        tier: 'oro',       requirement_type: 'ratings_count',   is_secret: false, requirement_value: 50  },
-  { code: 'rate_100',   title: 'Enciclopedia viviente',    description: 'Puntúa 100 juegos',                       tier: 'platino',   requirement_type: 'ratings_count',   is_secret: false, requirement_value: 100 },
+  { code: 'first_rating',  title: '¡Primer premio!',                     description: 'Puntúa tu primer juego',                      tier: 'bronce',    requirement_type: 'ratings_count',   is_secret: false, requirement_value: 1    },
+  { code: 'rating_10',     title: 'Crítico novato',                       description: 'Puntúa 10 juegos',                            tier: 'bronce',    requirement_type: 'ratings_count',   is_secret: false, requirement_value: 10   },
+  { code: 'rating_50',     title: 'Crítico experimentado',                description: 'Puntúa 50 juegos',                            tier: 'plata',     requirement_type: 'ratings_count',   is_secret: false, requirement_value: 50   },
+  { code: 'rating_100',    title: 'Crítico veterano',                     description: 'Puntúa 100 juegos',                           tier: 'oro',       requirement_type: 'ratings_count',   is_secret: false, requirement_value: 100  },
+  { code: 'rating_500',    title: 'Leyenda del rating',                   description: 'Puntúa 500 juegos',                           tier: 'platino',   requirement_type: 'ratings_count',   is_secret: false, requirement_value: 500  },
+  { code: 'rating_1000',   title: 'Ya toca una ducha, ¿no?',             description: 'Puntúa 1000 juegos',                          tier: 'legendario',requirement_type: 'ratings_count',   is_secret: false, requirement_value: 1000 },
   // reviews_count
-  { code: 'review_1',   title: 'Primer artículo',          description: 'Escribe tu primera reseña',               tier: 'bronce',    requirement_type: 'reviews_count',   is_secret: false, requirement_value: 1   },
-  { code: 'review_5',   title: 'Redactor habitual',        description: 'Escribe 5 reseñas',                       tier: 'plata',     requirement_type: 'reviews_count',   is_secret: false, requirement_value: 5   },
-  { code: 'review_15',  title: 'Columnista',               description: 'Escribe 15 reseñas',                      tier: 'oro',       requirement_type: 'reviews_count',   is_secret: false, requirement_value: 15  },
-  { code: 'review_30',  title: 'Crítico legendario',       description: 'Escribe 30 reseñas',                      tier: 'legendario',requirement_type: 'reviews_count',   is_secret: false, requirement_value: 30  },
+  { code: 'first_review',  title: 'Primera reseña',                      description: 'Escribe tu primera reseña',                   tier: 'bronce',    requirement_type: 'reviews_count',   is_secret: false, requirement_value: 1    },
+  { code: 'review_10',     title: 'Escritor casual',                     description: 'Escribe 10 reseñas',                          tier: 'bronce',    requirement_type: 'reviews_count',   is_secret: false, requirement_value: 10   },
+  { code: 'review_50',     title: 'Escritor frecuente',                  description: 'Escribe 50 reseñas',                          tier: 'plata',     requirement_type: 'reviews_count',   is_secret: false, requirement_value: 50   },
+  { code: 'review_100',    title: 'Escritor prolífico',                  description: 'Escribe 100 reseñas',                         tier: 'oro',       requirement_type: 'reviews_count',   is_secret: false, requirement_value: 100  },
+  { code: 'review_200',    title: 'Escritor de culto',                   description: 'Escribe 200 reseñas',                         tier: 'diamante',  requirement_type: 'reviews_count',   is_secret: false, requirement_value: 200  },
   // followers_count
-  { code: 'follow_1',   title: 'Primera fan',              description: 'Consigue tu primer seguidor',             tier: 'bronce',    requirement_type: 'followers_count', is_secret: false, requirement_value: 1   },
-  { code: 'follow_10',  title: 'En la ola',                description: 'Consigue 10 seguidores',                  tier: 'plata',     requirement_type: 'followers_count', is_secret: false, requirement_value: 10  },
-  { code: 'follow_50',  title: 'Influencer gamer',         description: 'Consigue 50 seguidores',                  tier: 'oro',       requirement_type: 'followers_count', is_secret: true,  requirement_value: 50  },
-  { code: 'follow_100', title: 'Leyenda de la comunidad',  description: 'Consigue 100 seguidores',                 tier: 'legendario',requirement_type: 'followers_count', is_secret: true,  requirement_value: 100 },
+  { code: 'first_follower', title: 'No estás solo',                      description: 'Consigue tu primer seguidor',                 tier: 'bronce',    requirement_type: 'followers_count', is_secret: false, requirement_value: 1    },
+  { code: 'followers_10',  title: 'Tu propio equipo gamer',              description: 'Consigue 10 seguidores',                      tier: 'plata',     requirement_type: 'followers_count', is_secret: false, requirement_value: 10   },
+  { code: 'followers_50',  title: 'Lo mismo es hora de abrir directo...', description: 'Consigue 50 seguidores',                     tier: 'oro',       requirement_type: 'followers_count', is_secret: true,  requirement_value: 50   },
+  { code: 'followers_100', title: 'Influencer gamer',                    description: 'Consigue 100 seguidores',                     tier: 'platino',   requirement_type: 'followers_count', is_secret: true,  requirement_value: 100  },
   // lists_count
-  { code: 'list_1',     title: 'Curador',                  description: 'Crea tu primera lista',                   tier: 'bronce',    requirement_type: 'lists_count',     is_secret: false, requirement_value: 1   },
-  { code: 'list_5',     title: 'Coleccionista',            description: 'Crea 5 listas',                           tier: 'plata',     requirement_type: 'lists_count',     is_secret: false, requirement_value: 5   },
+  { code: 'first_list',    title: 'Coleccionista',                       description: 'Crea tu primera lista',                       tier: 'bronce',    requirement_type: 'lists_count',     is_secret: false, requirement_value: 1    },
+  { code: 'lists_5',       title: '¡Listado!',                           description: 'Crea 5 listas',                               tier: 'plata',     requirement_type: 'lists_count',     is_secret: false, requirement_value: 5    },
+  { code: 'lists_10',      title: '¿Tienes TOC?',                        description: 'Crea 10 listas',                              tier: 'oro',       requirement_type: 'lists_count',     is_secret: false, requirement_value: 10   },
   // received_likes
-  { code: 'like_1',     title: 'Resonancia',               description: 'Recibe tu primer me gusta en una reseña', tier: 'bronce',    requirement_type: 'received_likes',  is_secret: false, requirement_value: 1   },
-  { code: 'like_25',    title: 'Voz influyente',           description: 'Recibe 25 me gustas en tus reseñas',      tier: 'oro',       requirement_type: 'received_likes',  is_secret: false, requirement_value: 25  },
+  { code: 'first_like',    title: 'Le gustas',                           description: 'Recibe tu primer me gusta en una reseña',     tier: 'bronce',    requirement_type: 'received_likes',  is_secret: false, requirement_value: 1    },
+  { code: 'likes_50',      title: 'Tu opinión importa',                  description: 'Recibe 50 me gustas en tus reseñas',          tier: 'plata',     requirement_type: 'received_likes',  is_secret: false, requirement_value: 50   },
+  { code: 'likes_200',     title: 'La voz del pueblo',                   description: 'Recibe 200 me gustas en tus reseñas',         tier: 'oro',       requirement_type: 'received_likes',  is_secret: false, requirement_value: 200  },
   // backlog_count
-  { code: 'backlog_1',  title: 'Backlog iniciado',         description: 'Añade tu primer juego al backlog',        tier: 'bronce',    requirement_type: 'backlog_count',   is_secret: false, requirement_value: 1   },
-  { code: 'backlog_20', title: 'Lista interminable',       description: 'Añade 20 juegos al backlog',              tier: 'plata',     requirement_type: 'backlog_count',   is_secret: false, requirement_value: 20  },
+  { code: 'backlog_10',    title: 'Cazador de juegos',                   description: 'Añade 10 juegos al backlog',                  tier: 'bronce',    requirement_type: 'backlog_count',   is_secret: false, requirement_value: 10   },
+  { code: 'backlog_50',    title: 'Coleccionista obsesivo',              description: 'Añade 50 juegos al backlog',                  tier: 'plata',     requirement_type: 'backlog_count',   is_secret: false, requirement_value: 50   },
 ];
 
 async function seedAchievements() {
+  const { rows } = await pool.query('SELECT COUNT(*)::int AS cnt FROM achievements');
+  if (rows[0].cnt >= ACHIEVEMENTS.length) return;
+
   for (const a of ACHIEVEMENTS) {
     await pool.query(
       `INSERT INTO achievements (code, title, description, tier, requirement_type, requirement_value, is_secret)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT (code) DO UPDATE
-         SET title = $2, description = $3, tier = $4,
-             requirement_type = $5, requirement_value = $6, is_secret = $7`,
+       ON CONFLICT (code) DO NOTHING`,
       [a.code, a.title, a.description, a.tier, a.requirement_type, a.requirement_value, a.is_secret]
     );
   }

@@ -49,6 +49,7 @@ const nextConfig = {
               "font-src 'self' https://fonts.gstatic.com data:",
               "connect-src 'self' ws: wss: https://hcaptcha.com https://*.hcaptcha.com",
               "frame-src https://hcaptcha.com https://*.hcaptcha.com",
+              "worker-src 'self' blob:",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
