@@ -363,8 +363,6 @@ export default function Navbar() {
                         .then((r) => (r.ok ? r.json() : []))
                         .then((data) => { if (Array.isArray(data)) setNotifications(data); })
                         .catch(() => {});
-                      fetch('/api/notifications', { method: 'PUT', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
-                      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
                     }
                   }
                 }}
@@ -394,6 +392,18 @@ export default function Navbar() {
                 <div className="absolute right-0 mt-2 w-80 rounded-xl border border-[#1A1A1A] overflow-hidden z-50 shadow-2xl" style={{ backgroundColor: '#111111' }}>
                   <div className="flex items-center justify-between px-4 py-3 border-b border-[#1A1A1A]">
                     <p className="text-white text-sm font-semibold">Notificaciones</p>
+                    {notifications.some((n) => !n.read) && (
+                      <button
+                        onClick={() => {
+                          setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+                          const token = localStorage.getItem('token');
+                          if (token) fetch('/api/notifications', { method: 'PUT', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+                        }}
+                        className="text-[#A855F7] hover:text-white text-xs transition-colors cursor-pointer"
+                      >
+                        Marcar todas como leídas
+                      </button>
+                    )}
                   </div>
                   <div className="max-h-96 overflow-y-auto">
                     {notifications.length === 0 ? (
@@ -440,8 +450,15 @@ export default function Navbar() {
                           <Link
                             key={n.id}
                             href={href}
-                            onClick={() => setBellOpen(false)}
-                            className={`flex items-start gap-3 px-4 py-3 hover:bg-[#1A1A1A] transition-colors min-h-[56px] ${n.read ? '' : 'bg-[#17111f]'}`}
+                            onClick={() => {
+                              if (!n.read) {
+                                setNotifications((prev) => prev.map((m) => m.id === n.id ? { ...m, read: true } : m));
+                                const token = localStorage.getItem('token');
+                                if (token) fetch(`/api/notifications/${n.id}/read`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+                              }
+                              setBellOpen(false);
+                            }}
+                            className={`flex items-start gap-3 px-4 py-3 transition-colors min-h-[56px] ${n.read ? 'hover:bg-[#1A1A1A]' : 'bg-[#17111f] hover:bg-[#1e1428]'}`}
                           >
                             {/* Avatar or system icon */}
                             {isSystem && systemIcon ? (
