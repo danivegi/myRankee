@@ -374,9 +374,20 @@ export default function Navbar() {
                 <span key={bellShakeKey} className={bellShakeKey > 0 ? 'bell-shake inline-flex' : 'inline-flex'}>
                   <IconBell size={18} />
                 </span>
-                {notifications.some((n) => !n.read) && (
-                  <span key={`badge-${bellShakeKey}`} className="badge-pop absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#A855F7]" />
-                )}
+                {(() => {
+                  const unreadCount = notifications.filter((n) => !n.read).length;
+                  if (unreadCount === 0) return null;
+                  return (
+                    <span
+                      key={`badge-${bellShakeKey}`}
+                      className="badge-pop absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-[#A855F7] flex items-center justify-center px-1"
+                    >
+                      <span className="text-white font-bold text-[10px] leading-none select-none">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    </span>
+                  );
+                })()}
               </button>
 
               {bellOpen && (
