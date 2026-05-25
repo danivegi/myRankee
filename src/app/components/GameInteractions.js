@@ -285,8 +285,8 @@ function AddToListModal({ gameId, onClose }) {
 
 // ── Rating modal ──────────────────────────────────────────────────────────────
 
-function RatingModal({ gameId, onClose, onSubmit }) {
-  const { addToast, addAchievementToast } = useToast();
+function RatingModal({ gameId, onClose, onSubmit, onAchievementsUnlocked }) {
+  const { addToast } = useToast();
   const [score, setScore]     = useState(0);
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
@@ -305,7 +305,11 @@ function RatingModal({ gameId, onClose, onSubmit }) {
       });
       addToast('¡Juego puntuado correctamente!');
       const ratingData = ratingRes.ok ? await ratingRes.json() : null;
-      fireAchievementToasts(ratingData?.new_achievements, addAchievementToast);
+
+      const allAchievements = [];
+      if (Array.isArray(ratingData?.new_achievements)) {
+        allAchievements.push(...ratingData.new_achievements);
+      }
 
       if (content.trim()) {
         const reviewRes = await fetch('/api/reviews', {
@@ -315,8 +319,14 @@ function RatingModal({ gameId, onClose, onSubmit }) {
         });
         addToast('¡Reseña publicada!');
         const reviewData = reviewRes.ok ? await reviewRes.json() : null;
-        fireAchievementToasts(reviewData?.new_achievements, addAchievementToast);
+        if (Array.isArray(reviewData?.new_achievements)) {
+          allAchievements.push(...reviewData.new_achievements);
+        }
       }
+
+      // Fire achievements BEFORE closing — onAchievementsUnlocked runs in GameInteractions
+      // which stays mounted, avoiding any stale-closure/unmount timing issue.
+      onAchievementsUnlocked(allAchievements);
       onSubmit();
       onClose();
     } catch {
@@ -601,6 +611,10 @@ export default function GameInteractions({ gameId, gameData }) {
     loadReviews();
   }
 
+  function handleAchievementsUnlocked(achievements) {
+    fireAchievementToasts(achievements, addAchievementToast);
+  }
+
   const avgScore = stats?.avg_score ?? null;
   const totalRatings = stats?.total_ratings ?? 0;
 
@@ -821,6 +835,7 @@ export default function GameInteractions({ gameId, gameData }) {
           gameId={gameId}
           onClose={() => setModalOpen(false)}
           onSubmit={handleSubmitted}
+          onAchievementsUnlocked={handleAchievementsUnlocked}
         />
       )}
 
