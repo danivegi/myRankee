@@ -270,7 +270,7 @@ function TrendingSidebar({ items }) {
                 {item.title}
               </Link>
               <span className="text-[#A855F7] text-xs font-mono">
-                {item.count} {item.count === 1 ? 'valoración' : 'valoraciones'} hoy
+                {item.count} {item.count === 1 ? 'valoración' : 'valoraciones'} esta semana
               </span>
             </div>
           </div>
