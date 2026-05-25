@@ -645,7 +645,7 @@ function AchievementCard({ ach, isOwner }) {
           backgroundColor: '#111111',
           borderColor: 'transparent',
           boxShadow: 'none',
-          opacity: 0.4,
+          opacity: 0.6,
         }),
       }}
     >
@@ -659,8 +659,8 @@ function AchievementCard({ ach, isOwner }) {
             backgroundColor: `${color}20`,
             fontWeight: 600,
           } : {
-            color: '#3F3F46',
-            borderColor: '#2A2A2A',
+            color: '#52525B',
+            borderColor: '#3F3F46',
             backgroundColor: 'transparent',
           }}
         >
@@ -677,7 +677,7 @@ function AchievementCard({ ach, isOwner }) {
             </svg>
           </div>
         ) : (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2A2A2A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#52525B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
@@ -695,7 +695,7 @@ function AchievementCard({ ach, isOwner }) {
             quality={100}
             style={{
               imageRendering: 'pixelated',
-              filter: unlocked ? 'none' : 'grayscale(100%) brightness(0.5)',
+              filter: unlocked ? 'none' : 'grayscale(80%) brightness(0.65)',
               width: '100%',
               height: '100%',
               objectFit: 'contain',
@@ -706,10 +706,10 @@ function AchievementCard({ ach, isOwner }) {
 
       {/* Title + description */}
       <div className="flex flex-col gap-0.5 flex-1">
-        <p className={`text-center text-sm leading-snug ${anton.className} ${unlocked ? 'text-white' : 'text-[#3F3F46]'}`}>
+        <p className={`text-center text-sm leading-snug ${anton.className} ${unlocked ? 'text-white' : 'text-[#71717A]'}`}>
           {ach.title}
         </p>
-        <p className={`text-center text-xs leading-relaxed ${unlocked ? 'text-[#9CA3AF]' : 'text-[#3F3F46]'}`}>
+        <p className={`text-center text-xs leading-relaxed ${unlocked ? 'text-[#9CA3AF]' : 'text-[#52525B]'}`}>
           {ach.description}
         </p>
       </div>
