@@ -17,24 +17,28 @@ export async function ensureNotificationsTable() {
 
 const SYSTEM_TYPES = new Set(['warning', 'content_deleted', 'suspended', 'report_reviewed']);
 
-const PREF_COLUMN = {
-  like:    'likes_enabled',
-  comment: 'comments_enabled',
-  follow:  'followers_enabled',
+const PREF_KEY = {
+  like:    'review_likes',
+  comment: 'comments_on_reviews',
+  follow:  'new_followers',
 };
 
 export async function createNotification({ userId, fromUserId, type, entityId = null, entityName = null }) {
   if (userId === fromUserId) return;
 
   if (!SYSTEM_TYPES.has(type)) {
-    const col = PREF_COLUMN[type];
-    if (col) {
+    const prefKey = PREF_KEY[type];
+    if (prefKey) {
       const { rows } = await pool.query(
-        `SELECT ${col} FROM user_notification_preferences WHERE user_id = $1`,
+        `SELECT preferences FROM user_notification_preferences WHERE user_id = $1`,
         [userId]
       );
-      // If a row exists and the toggle is explicitly false, skip
-      if (rows.length > 0 && rows[0][col] === false) return;
+      if (rows.length > 0) {
+        const prefs = typeof rows[0].preferences === 'string'
+          ? JSON.parse(rows[0].preferences)
+          : rows[0].preferences;
+        if (prefs?.[prefKey] === false) return;
+      }
     }
   }
 
