@@ -5,6 +5,7 @@ import pool from '@/lib/db';
 import { checkPassword } from '@/lib/password';
 import { ensureAuthTables, logSecurityEvent } from '@/lib/init-auth';
 import { ensureReportsTables } from '@/lib/init-reports';
+import { createDefaultNotificationPreferences } from '@/lib/init-notifications';
 import { checkRateLimit, getIp, rateLimitResponse, LIMITS } from '@/lib/rate-limit';
 import { validate, userRegistrationSchema, validationErrorResponse } from '@/lib/validation';
 import { verifyCaptcha } from '@/lib/captcha';
@@ -117,6 +118,8 @@ export async function POST(request) {
     );
 
     const user = dbResult.rows[0];
+
+    await createDefaultNotificationPreferences(user.id).catch(() => {});
 
     // Mark attempt as successful
     await pool.query(

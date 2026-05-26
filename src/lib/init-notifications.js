@@ -1,5 +1,32 @@
 import pool from './db';
 
+const DEFAULT_PREFERENCES = {
+  review_likes:        true,
+  comments_on_reviews: true,
+  new_followers:       true,
+  follows_back:        true,
+  list_likes:          true,
+};
+
+export async function ensureNotificationPreferencesTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_notification_preferences (
+      user_id     INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      preferences JSONB   NOT NULL DEFAULT '{}',
+      updated_at  TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+}
+
+export async function createDefaultNotificationPreferences(userId) {
+  await ensureNotificationPreferencesTable();
+  await pool.query(`
+    INSERT INTO user_notification_preferences (user_id, preferences, updated_at)
+    VALUES ($1, $2, NOW())
+    ON CONFLICT (user_id) DO NOTHING
+  `, [userId, JSON.stringify(DEFAULT_PREFERENCES)]);
+}
+
 export async function ensureNotificationsTable() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS notifications (

@@ -5,8 +5,8 @@ const DEFAULTS = {
   comments_on_reviews: true,
   new_followers:       true,
   follows_back:        true,
-  review_likes:        false,
-  list_likes:          false,
+  review_likes:        true,
+  list_likes:          true,
 };
 
 function getUser(request) {
