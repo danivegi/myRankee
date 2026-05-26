@@ -276,7 +276,7 @@ const SOCIAL_PLATFORMS = [
   { key: 'twitch',    label: 'Twitch',      placeholder: 'https://twitch.tv/tucanal'                     },
   { key: 'youtube',   label: 'YouTube',     placeholder: 'https://youtube.com/@tucanal'                  },
   { key: 'steam',     label: 'Steam',       placeholder: 'https://steamcommunity.com/id/tuusuario'       },
-  { key: 'discord',   label: 'Discord',     placeholder: 'https://discord.gg/tuservidor'                 },
+  { key: 'discord',   label: 'Discord',     placeholder: 'TuUsuario  ||  TuUsuario#1234', isText: true     },
   { key: 'tiktok',    label: 'TikTok',      placeholder: 'https://tiktok.com/@tuusuario'                 },
 ];
 
@@ -303,6 +303,7 @@ function SocialLinksSection({ token, username }) {
     e.preventDefault();
     for (const [platform, url] of Object.entries(links)) {
       if (!url.trim()) continue;
+      if (platform === 'discord') continue; // free-text field, no URL validation
       try {
         const u = new URL(url.trim());
         if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error();
@@ -331,7 +332,7 @@ function SocialLinksSection({ token, username }) {
   return (
     <Section title="Redes sociales" subtitle="Añade tus perfiles en redes sociales. Deja en blanco los que no quieras mostrar.">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {SOCIAL_PLATFORMS.map(({ key, label, placeholder }) => (
+        {SOCIAL_PLATFORMS.map(({ key, label, placeholder, isText }) => (
           <div key={key} className="flex items-center gap-3">
             <div className="w-8 flex-shrink-0 flex items-center justify-center text-[#71717A]">
               <SocialIcon platform={key} size={18} />
@@ -339,10 +340,11 @@ function SocialLinksSection({ token, username }) {
             <div className="flex-1 flex flex-col gap-1.5">
               <label className="text-[#71717A] text-xs font-mono uppercase tracking-wider">{label}</label>
               <input
-                type="url"
+                type={isText ? 'text' : 'url'}
                 value={links[key]}
                 onChange={(e) => setLinks((prev) => ({ ...prev, [key]: e.target.value }))}
                 placeholder={placeholder}
+                maxLength={isText ? 40 : undefined}
                 className={inputCls}
               />
             </div>

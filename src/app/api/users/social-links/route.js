@@ -32,7 +32,11 @@ export async function PUT(request) {
         [user.id, platform]
       );
     } else {
-      if (!isValidUrl(url)) {
+      if (platform === 'discord') {
+        if (url.length > 40) {
+          return Response.json({ error: 'El usuario de Discord es demasiado largo' }, { status: 400 });
+        }
+      } else if (!isValidUrl(url)) {
         return Response.json({ error: `URL inválida para ${platform}` }, { status: 400 });
       }
       await pool.query(`

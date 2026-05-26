@@ -11,6 +11,7 @@ import ReviewCommentsSection from '@/app/components/ReviewCommentsSection';
 import ShareModal from '@/app/components/ShareModal';
 import ReportModal from '@/app/components/ReportModal';
 import { getAchievementImage } from '@/lib/achievement-images';
+import { useToast } from '@/app/components/ToastProvider';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
@@ -170,6 +171,45 @@ function SocialIcon({ platform, size = 14 }) {
     case 'tiktok':    return <svg {...s} fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-2.73 30.35 30.35 0 00-.08-4.96h-4v13.28a2.92 2.92 0 01-2.91 2.7 2.92 2.92 0 01-2.91-2.91 2.92 2.92 0 012.91-2.91c.28 0 .54.04.79.1V9.35a6.93 6.93 0 00-.79-.05 6.91 6.91 0 00-6.91 6.91 6.91 6.91 0 006.91 6.91 6.91 6.91 0 006.91-6.91V9.73a9.71 9.71 0 005.68 1.8V7.69a4.83 4.83 0 01-1.83-.99z"/></svg>;
     default:          return <svg {...s} fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
   }
+}
+
+function SocialLinkPill({ platform, url }) {
+  const { addToast } = useToast();
+  const color = PLATFORM_COLORS[platform] ?? '#A855F7';
+  const label = PLATFORM_LABELS[platform] ?? platform;
+
+  const pillCls = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border border-[#1A1A1A] text-[#71717A] transition-all';
+
+  function onEnter(e) { e.currentTarget.style.borderColor = color; e.currentTarget.style.color = color; }
+  function onLeave(e) { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#71717A'; }
+
+  const inner = <><SocialIcon platform={platform} size={13} /><span>{label}</span></>;
+
+  if (platform === 'discord') {
+    async function handleCopy() {
+      try {
+        await navigator.clipboard.writeText(url);
+        addToast('¡Usuario de Discord copiado!');
+      } catch {
+        addToast(`Discord: ${url}`);
+      }
+    }
+    return (
+      <button onClick={handleCopy} title="Clic para copiar"
+        className={`${pillCls} cursor-pointer`}
+        onMouseEnter={onEnter} onMouseLeave={onLeave}>
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" title="Abrir perfil"
+      className={pillCls}
+      onMouseEnter={onEnter} onMouseLeave={onLeave}>
+      {inner}
+    </a>
+  );
 }
 
 function IconGrid({ size = 16 }) {
@@ -2092,24 +2132,9 @@ export default function UserProfilePage({ params }) {
             )}
             {socialLinks.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-0.5">
-                {socialLinks.map(({ platform, url }) => {
-                  const color = PLATFORM_COLORS[platform] ?? '#A855F7';
-                  const label = PLATFORM_LABELS[platform] ?? platform;
-                  return (
-                    <a
-                      key={platform}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border border-[#1A1A1A] text-[#71717A] transition-all"
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = color; e.currentTarget.style.color = color; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#71717A'; }}
-                    >
-                      <SocialIcon platform={platform} size={13} />
-                      <span>{label}</span>
-                    </a>
-                  );
-                })}
+                {socialLinks.map(({ platform, url }) => (
+                  <SocialLinkPill key={platform} platform={platform} url={url} />
+                ))}
               </div>
             )}
           </div>
