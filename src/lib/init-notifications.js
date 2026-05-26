@@ -15,8 +15,29 @@ export async function ensureNotificationsTable() {
   `);
 }
 
+const SYSTEM_TYPES = new Set(['warning', 'content_deleted', 'suspended', 'report_reviewed']);
+
+const PREF_COLUMN = {
+  like:    'likes_enabled',
+  comment: 'comments_enabled',
+  follow:  'followers_enabled',
+};
+
 export async function createNotification({ userId, fromUserId, type, entityId = null, entityName = null }) {
-  if (userId === fromUserId) return; // never notify yourself
+  if (userId === fromUserId) return;
+
+  if (!SYSTEM_TYPES.has(type)) {
+    const col = PREF_COLUMN[type];
+    if (col) {
+      const { rows } = await pool.query(
+        `SELECT ${col} FROM user_notification_preferences WHERE user_id = $1`,
+        [userId]
+      );
+      // If a row exists and the toggle is explicitly false, skip
+      if (rows.length > 0 && rows[0][col] === false) return;
+    }
+  }
+
   await ensureNotificationsTable();
   await pool.query(
     `INSERT INTO notifications (user_id, from_user_id, type, entity_id, entity_name)
