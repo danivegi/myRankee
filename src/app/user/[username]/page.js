@@ -136,6 +136,42 @@ const STATUS_COLORS = { pendiente: '#A855F7', jugando: '#3B82F6', jugado: '#10B9
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
+// ── Social platform config ────────────────────────────────────────────────────
+
+const PLATFORM_LABELS = {
+  twitter:   'Twitter / X',
+  instagram: 'Instagram',
+  twitch:    'Twitch',
+  youtube:   'YouTube',
+  steam:     'Steam',
+  discord:   'Discord',
+  tiktok:    'TikTok',
+};
+
+const PLATFORM_COLORS = {
+  twitter:   '#1D9BF0',
+  instagram: '#E1306C',
+  twitch:    '#9146FF',
+  youtube:   '#FF0000',
+  steam:     '#66C0F4',
+  discord:   '#5865F2',
+  tiktok:    '#EE1D52',
+};
+
+function SocialIcon({ platform, size = 14 }) {
+  const s = { width: size, height: size, viewBox: '0 0 24 24', strokeLinecap: 'round', strokeLinejoin: 'round' };
+  switch (platform) {
+    case 'twitter':   return <svg {...s} fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>;
+    case 'instagram': return <svg {...s} fill="none" stroke="currentColor" strokeWidth="1.75"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>;
+    case 'twitch':    return <svg {...s} fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M21 2H3v16h5v4l4-4h5l4-4V2z"/><line x1="11" y1="7" x2="11" y2="11"/><line x1="16" y1="7" x2="16" y2="11"/></svg>;
+    case 'youtube':   return <svg {...s} fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.54C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>;
+    case 'steam':     return <svg {...s} fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.544-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/><line x1="6" y1="11" x2="10" y2="11"/><line x1="8" y1="9" x2="8" y2="13"/><line x1="15" y1="12" x2="15.01" y2="12" strokeWidth="3"/><line x1="18" y1="10" x2="18.01" y2="10" strokeWidth="3"/></svg>;
+    case 'discord':   return <svg {...s} fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M8.5 5.5C7 5.8 5.5 6.5 4.5 8 3 10 2.5 13 2.5 15c1 1.5 3 2.5 4.5 3"/><path d="M15.5 5.5C17 5.8 18.5 6.5 19.5 8 21 10 21.5 13 21.5 15c-1 1.5-3 2.5-4.5 3"/><path d="M7.5 7.5C8.5 7 10 6.5 12 6.5s3.5.5 4.5 1"/><path d="M7.5 16.5C8.5 17 10 17.5 12 17.5s3.5-.5 4.5-1"/><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/></svg>;
+    case 'tiktok':    return <svg {...s} fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-2.73 30.35 30.35 0 00-.08-4.96h-4v13.28a2.92 2.92 0 01-2.91 2.7 2.92 2.92 0 01-2.91-2.91 2.92 2.92 0 012.91-2.91c.28 0 .54.04.79.1V9.35a6.93 6.93 0 00-.79-.05 6.91 6.91 0 00-6.91 6.91 6.91 6.91 0 006.91 6.91 6.91 6.91 0 006.91-6.91V9.73a9.71 9.71 0 005.68 1.8V7.69a4.83 4.83 0 01-1.83-.99z"/></svg>;
+    default:          return <svg {...s} fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
+  }
+}
+
 function IconGrid({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1726,6 +1762,7 @@ export default function UserProfilePage({ params }) {
   const [viewerUsername, setViewerUsername] = useState(null);
   const [loading,        setLoading]        = useState(true);
   const [notFound,       setNotFound]       = useState(false);
+  const [socialLinks,    setSocialLinks]    = useState([]);
 
   // Follow state
   const [isFollowing,    setIsFollowing]    = useState(false);
@@ -1840,13 +1877,14 @@ export default function UserProfilePage({ params }) {
         setIsFollowing(user.is_following ?? false);
         setFollowersCount(user.total_followers ?? 0);
 
-        const [revRes, ratRes, achRes, topRes] = await Promise.all([
+        const [revRes, ratRes, achRes, topRes, socialRes] = await Promise.all([
           fetch(`/api/users/${username}/reviews`, { headers: t ? { Authorization: `Bearer ${t}` } : {} }),
           fetch(`/api/users/${username}/ratings`),
           fetch(`/api/users/${username}/achievements`, {
             headers: t ? { Authorization: `Bearer ${t}` } : {},
           }),
           fetch(`/api/users/${username}/top-games`),
+          fetch(`/api/users/${username}/social-links`),
         ]);
         if (revRes.ok) setReviews(await revRes.json());
         if (ratRes.ok) setRatings(await ratRes.json());
@@ -1855,6 +1893,7 @@ export default function UserProfilePage({ params }) {
           setAchievements(achData.achievements ?? []);
         }
         if (topRes.ok) setTopGames(await topRes.json());
+        if (socialRes.ok) setSocialLinks(await socialRes.json());
 
         if (t) {
           const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${t}` } });
@@ -2042,7 +2081,7 @@ export default function UserProfilePage({ params }) {
             <Avatar user={profile} size={96} className="ring-4 ring-[#0A0A0A]" />
           </div>
 
-          {/* Name + username + bio */}
+          {/* Name + username + bio + social links */}
           <div className="flex flex-col gap-1.5 flex-1 min-w-0">
             <span className={`${anton.className} text-white text-[28px] leading-tight`}>
               {profile.nombre} {profile.apellido}
@@ -2050,6 +2089,28 @@ export default function UserProfilePage({ params }) {
             <span className="text-[#71717A] font-mono text-sm">@{profile.username}</span>
             {profile.bio && (
               <p className="text-[#71717A] text-sm leading-[1.5] max-w-xl">{profile.bio}</p>
+            )}
+            {socialLinks.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-0.5">
+                {socialLinks.map(({ platform, url }) => {
+                  const color = PLATFORM_COLORS[platform] ?? '#A855F7';
+                  const label = PLATFORM_LABELS[platform] ?? platform;
+                  return (
+                    <a
+                      key={platform}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border border-[#1A1A1A] text-[#71717A] transition-all"
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = color; e.currentTarget.style.color = color; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#71717A'; }}
+                    >
+                      <SocialIcon platform={platform} size={13} />
+                      <span>{label}</span>
+                    </a>
+                  );
+                })}
+              </div>
             )}
           </div>
 

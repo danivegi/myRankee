@@ -61,6 +61,7 @@ export async function DELETE(request) {
     await client.query('DELETE FROM lists WHERE user_id = $1', [uid]);
 
     // Social
+    await client.query('DELETE FROM user_social_links WHERE user_id = $1', [uid]);
     await client.query('DELETE FROM follows WHERE follower_id = $1 OR followed_id = $1', [uid]);
 
     // Notifications
