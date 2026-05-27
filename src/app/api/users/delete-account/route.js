@@ -42,13 +42,23 @@ export async function DELETE(request) {
     await client.query('DELETE FROM review_likes WHERE review_id IN (SELECT id FROM reviews WHERE user_id = $1)', [uid]);
     await client.query('DELETE FROM review_likes WHERE user_id = $1', [uid]);
 
-    // Comments
-    await client.query('DELETE FROM comments WHERE user_id = $1', [uid]);
+    // Comments on the user's reviews (by others), then comments the user wrote
+    await client.query('DELETE FROM review_comments WHERE review_id IN (SELECT id FROM reviews WHERE user_id = $1)', [uid]);
+    await client.query('DELETE FROM review_comments WHERE user_id = $1', [uid]);
 
-    // Reviews
+    // Reports about the user's reviews and comments, plus reports made by the user
+    await client.query(
+      `DELETE FROM reports WHERE target_type = 'review' AND target_id IN (SELECT id FROM reviews WHERE user_id = $1)`,
+      [uid]
+    );
+    await client.query(
+      `DELETE FROM reports WHERE target_type = 'comment' AND target_id IN (SELECT id FROM review_comments WHERE user_id = $1)`,
+      [uid]
+    );
+    await client.query('DELETE FROM reports WHERE reporter_id = $1', [uid]);
+
+    // Reviews and ratings
     await client.query('DELETE FROM reviews WHERE user_id = $1', [uid]);
-
-    // Ratings
     await client.query('DELETE FROM ratings WHERE user_id = $1', [uid]);
 
     // Backlog
@@ -60,15 +70,20 @@ export async function DELETE(request) {
     await client.query('DELETE FROM list_followers WHERE user_id = $1', [uid]);
     await client.query('DELETE FROM lists WHERE user_id = $1', [uid]);
 
-    // Social
+    // Favorites
+    await client.query('DELETE FROM favorite_games     WHERE user_id = $1', [uid]);
+    await client.query('DELETE FROM favorite_games_top WHERE user_id = $1', [uid]);
+
+    // Social links and follows
     await client.query('DELETE FROM user_social_links WHERE user_id = $1', [uid]);
     await client.query('DELETE FROM follows WHERE follower_id = $1 OR followed_id = $1', [uid]);
 
     // Notifications
     await client.query('DELETE FROM notifications WHERE user_id = $1 OR from_user_id = $1', [uid]);
 
-    // Achievements
-    await client.query('DELETE FROM user_achievements WHERE user_id = $1', [uid]);
+    // Achievements and preferences
+    await client.query('DELETE FROM user_achievements             WHERE user_id = $1', [uid]);
+    await client.query('DELETE FROM user_notification_preferences WHERE user_id = $1', [uid]);
 
     // Activity log
     await client.query('DELETE FROM activity WHERE user_id = $1', [uid]);

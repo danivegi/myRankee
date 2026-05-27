@@ -707,7 +707,7 @@ function DangerSection({ token, username, onLogout }) {
 
             <div className="flex flex-col gap-2">
               <label className="text-[#9CA3AF] text-xs">
-                Escribe <span className="text-white font-mono">@{username}</span> para confirmar:
+                Escribe <span className="text-white font-mono">{username}</span> para confirmar:
               </label>
               <input
                 type="text"
