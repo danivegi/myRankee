@@ -23,6 +23,8 @@ export async function GET(request) {
     profileRes, ratingsRes, reviewsRes, listsRes,
     backlogRes, commentsRes, achievementsRes,
     followersRes, followingRes,
+    favGamesRes, favTopRes,
+    socialLinksRes, notifPrefsRes,
   ] = await Promise.all([
     pool.query(
       `SELECT username, nombre, apellido, email, bio, avatar_url, created_at, terms_accepted_at
@@ -30,11 +32,11 @@ export async function GET(request) {
     ),
     pool.query('SELECT igdb_game_id, score, created_at FROM ratings WHERE user_id = $1 ORDER BY created_at DESC', [uid]),
     pool.query('SELECT igdb_game_id, content, created_at, updated_at FROM reviews WHERE user_id = $1 ORDER BY created_at DESC', [uid]),
-    pool.query('SELECT id, title, description, is_public, created_at FROM lists WHERE user_id = $1', [uid]),
+    pool.query('SELECT id, title, description, is_public, created_at FROM lists WHERE user_id = $1 ORDER BY created_at DESC', [uid]),
     pool.query('SELECT igdb_game_id, status, updated_at FROM backlog WHERE user_id = $1 ORDER BY updated_at DESC', [uid]),
     pool.query(
       `SELECT r.igdb_game_id, c.content, c.created_at
-       FROM comments c JOIN reviews r ON r.id = c.review_id
+       FROM review_comments c JOIN reviews r ON r.id = c.review_id
        WHERE c.user_id = $1 ORDER BY c.created_at DESC`, [uid]
     ),
     pool.query(
@@ -50,6 +52,10 @@ export async function GET(request) {
       `SELECT u.username FROM follows f JOIN users u ON u.id = f.followed_id
        WHERE f.follower_id = $1`, [uid]
     ),
+    pool.query('SELECT igdb_game_id, created_at FROM favorite_games WHERE user_id = $1 ORDER BY created_at DESC', [uid]),
+    pool.query('SELECT igdb_game_id, position FROM favorite_games_top WHERE user_id = $1 ORDER BY position ASC', [uid]),
+    pool.query('SELECT platform, url FROM user_social_links WHERE user_id = $1 ORDER BY platform', [uid]),
+    pool.query('SELECT preferences FROM user_notification_preferences WHERE user_id = $1', [uid]),
   ]);
 
   // Attach games to each list
@@ -76,6 +82,10 @@ export async function GET(request) {
     achievements: achievementsRes.rows,
     followers: followersRes.rows.map((r) => r.username),
     following: followingRes.rows.map((r) => r.username),
+    favorite_games: favGamesRes.rows,
+    favorite_games_top: favTopRes.rows,
+    social_links: socialLinksRes.rows,
+    notification_preferences: notifPrefsRes.rows[0]?.preferences ?? null,
   };
 
   const username = profileRes.rows[0]?.username ?? uid;
