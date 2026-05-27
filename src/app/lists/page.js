@@ -142,8 +142,8 @@ function CreateListModal({ onClose, onCreated }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-      <div className="w-full max-w-md rounded-2xl border border-[#1A1A1A] flex flex-col gap-6 p-6" style={{ backgroundColor: '#111111' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }} onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl border border-[#1A1A1A] flex flex-col gap-6 p-6" style={{ backgroundColor: '#111111' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className={`${anton.className} text-white text-2xl`}>Crear Lista</h2>
           <button onClick={onClose} className="text-[#71717A] hover:text-white transition-colors cursor-pointer">

@@ -98,8 +98,9 @@ function SearchBox({ onClose }) {
     <div
       className="fixed inset-0 z-50 flex items-start justify-center pt-16"
       style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}
     >
-      <div className="w-full max-w-2xl mx-4">
+      <div className="w-full max-w-2xl mx-4" onClick={(e) => e.stopPropagation()}>
 
         {/* Input */}
         <div className="flex items-center gap-3 h-14 px-5 rounded-xl bg-[#161616] border border-[#2A2A2A] shadow-2xl">
@@ -295,7 +296,7 @@ export default function Navbar() {
 
   useEffect(() => {
     function handleKey(e) {
-      if (e.key === 'Escape') { setMenuOpen(false); setDropOpen(false); setBellOpen(false); }
+      if (e.key === 'Escape') { setMenuOpen(false); setDropOpen(false); setBellOpen(false); setSearchOpen(false); }
     }
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);

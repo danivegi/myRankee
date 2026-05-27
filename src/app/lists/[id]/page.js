@@ -79,8 +79,8 @@ function AddGameModal({ listId, onClose, onAdded, onRemoved, initialAddedIds = [
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-fade-in" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-      <div className="modal-scale-in w-full max-w-lg rounded-2xl border border-[#1A1A1A] flex flex-col gap-4 p-6" style={{ backgroundColor: '#111111' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-fade-in" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }} onClick={onClose}>
+      <div className="modal-scale-in w-full max-w-lg rounded-2xl border border-[#1A1A1A] flex flex-col gap-4 p-6" style={{ backgroundColor: '#111111' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className={`${anton.className} text-white text-2xl`}>Añadir juego</h2>
           <button onClick={onClose} className="text-[#71717A] hover:text-white transition-colors cursor-pointer">
@@ -193,8 +193,8 @@ function EditListModal({ list, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-fade-in" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-      <div className="modal-scale-in w-full max-w-md rounded-2xl border border-[#1A1A1A] flex flex-col gap-6 p-6" style={{ backgroundColor: '#111111' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-fade-in" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }} onClick={onClose}>
+      <div className="modal-scale-in w-full max-w-md rounded-2xl border border-[#1A1A1A] flex flex-col gap-6 p-6" style={{ backgroundColor: '#111111' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className={`${anton.className} text-white text-2xl`}>Editar lista</h2>
           <button onClick={onClose} className="text-[#71717A] hover:text-white transition-colors cursor-pointer">
