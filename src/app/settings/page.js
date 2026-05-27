@@ -398,10 +398,10 @@ function PasswordSection({ token }) {
 
   return (
     <Section title="Cambiar contraseña">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-5">
         <div>
           <label className="block text-[#71717A] text-xs font-mono uppercase tracking-wider mb-2">Contraseña actual</label>
-          <input type="password" name="current" value={form.current} onChange={handleChange} placeholder="••••••••" required autoComplete="current-password" className={inputCls} />
+          <input type="password" name="current" value={form.current} onChange={handleChange} placeholder="••••••••" required autoComplete="new-password" className={inputCls} />
         </div>
         <div>
           <label className="block text-[#71717A] text-xs font-mono uppercase tracking-wider mb-2">Nueva contraseña</label>
@@ -456,14 +456,14 @@ function EmailSection({ token, currentEmail, onEmailUpdate }) {
 
   return (
     <Section title="Cambiar correo electrónico" subtitle={`Correo actual: ${currentEmail}`}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-5">
         <div>
           <label className="block text-[#71717A] text-xs font-mono uppercase tracking-wider mb-2">Nuevo correo</label>
-          <input type="email" name="new_email" value={form.new_email} onChange={handleChange} placeholder="nuevo@correo.com" required autoComplete="email" className={inputCls} />
+          <input type="email" name="new_email" value={form.new_email} onChange={handleChange} placeholder="nuevo@correo.com" required autoComplete="off" className={inputCls} />
         </div>
         <div>
           <label className="block text-[#71717A] text-xs font-mono uppercase tracking-wider mb-2">Contraseña actual</label>
-          <input type="password" name="password" value={form.password} onChange={handleChange} placeholder="••••••••" required autoComplete="current-password" className={inputCls} />
+          <input type="password" name="password" value={form.password} onChange={handleChange} placeholder="••••••••" required autoComplete="new-password" className={inputCls} />
         </div>
         {error && <p className="text-red-400 text-sm">{error}</p>}
         <button type="submit" disabled={saving} className="px-6 py-3 rounded-xl bg-[#A855F7] text-[#0A0A0A] text-sm font-bold hover:bg-[#9333EA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer w-fit">
