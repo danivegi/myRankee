@@ -265,6 +265,10 @@ export default function AdminReportsPage() {
 }
 
 function ReportCard({ report, onAction, isPending }) {
+  const preview = report.target_content
+    ? (report.target_content.length > 300 ? report.target_content.slice(0, 300) + '…' : report.target_content)
+    : null;
+
   return (
     <div className="rounded-xl border border-[#1A1A1A] bg-[#111111] p-5 flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
@@ -287,6 +291,35 @@ function ReportCard({ report, onAction, isPending }) {
           )}
         </div>
         <p className="flex-shrink-0 text-[#3F3F46] text-xs">{formatDate(report.created_at)}</p>
+      </div>
+
+      {/* Reported content preview */}
+      <div className="rounded-lg border border-[#2A2A2A] bg-[#0A0A0A] px-4 py-3 flex flex-col gap-2">
+        {preview ? (
+          <>
+            <div className="flex items-center gap-2 text-xs text-[#71717A] flex-wrap">
+              <span className="text-[#3F3F46] uppercase tracking-wide font-mono text-[10px]">
+                {TARGET_LABELS[report.target_type] ?? report.target_type} reportado
+              </span>
+              <span className="text-[#3F3F46]">·</span>
+              <span>por</span>
+              <span className="text-white font-medium">@{report.target_author}</span>
+              {report.target_game_id && (
+                <a
+                  href={`/game/${report.target_game_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-auto text-[#A855F7] text-xs hover:underline flex-shrink-0"
+                >
+                  Ver en contexto ↗
+                </a>
+              )}
+            </div>
+            <p className="text-[#D4D4D8] text-sm leading-relaxed">{preview}</p>
+          </>
+        ) : (
+          <p className="text-[#3F3F46] text-sm italic">[Contenido eliminado]</p>
+        )}
       </div>
 
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -318,22 +351,19 @@ function ReportCard({ report, onAction, isPending }) {
             </button>
             <button
               onClick={() => onAction('warn')}
-              className="px-3 py-1.5 rounded-lg border text-xs transition-colors"
-              style={{ borderColor: '#92400E50', color: '#F59E0B', backgroundColor: '#78350F20' }}
+              className="px-3 py-1.5 rounded-lg border text-xs transition-colors cursor-pointer border-amber-900/40 text-amber-400 bg-amber-950/20 hover:bg-amber-900/30 hover:border-amber-700/60"
             >
               Avisar
             </button>
             <button
               onClick={() => onAction('delete_content')}
-              className="px-3 py-1.5 rounded-lg border text-xs transition-colors"
-              style={{ borderColor: '#C2410C50', color: '#FB923C', backgroundColor: '#7C2D1220' }}
+              className="px-3 py-1.5 rounded-lg border text-xs transition-colors cursor-pointer border-orange-700/30 text-orange-400 bg-orange-950/20 hover:bg-orange-900/30 hover:border-orange-600/60"
             >
               Eliminar contenido
             </button>
             <button
               onClick={() => onAction('suspend_user')}
-              className="px-3 py-1.5 rounded-lg border text-xs transition-colors"
-              style={{ borderColor: '#99182150', color: '#F87171', backgroundColor: '#7F1D1D20' }}
+              className="px-3 py-1.5 rounded-lg border text-xs transition-colors cursor-pointer border-red-800/30 text-red-400 bg-red-950/20 hover:bg-red-900/30 hover:border-red-600/60"
             >
               Suspender
             </button>

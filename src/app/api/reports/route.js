@@ -77,12 +77,25 @@ export async function GET(request) {
       `SELECT
          r.id, r.target_type, r.target_id, r.reason, r.description, r.status,
          r.action_taken, r.created_at, r.reviewed_at,
-         u.username   AS reporter_username,
-         u.avatar_url AS reporter_avatar,
-         rv.username  AS reviewer_username
+         reporter.username       AS reporter_username,
+         reporter.avatar_url     AS reporter_avatar,
+         reviewer.username       AS reviewer_username,
+         COALESCE(rv.content,  cmt.content)               AS target_content,
+         COALESCE(rv_au.username, cmt_au.username)         AS target_author,
+         COALESCE(rv.igdb_game_id, cmt_rv.igdb_game_id)   AS target_game_id
        FROM reports r
-       JOIN users u  ON u.id  = r.reporter_id
-       LEFT JOIN users rv ON rv.id = r.reviewed_by
+       JOIN  users reporter  ON reporter.id  = r.reporter_id
+       LEFT JOIN users reviewer  ON reviewer.id  = r.reviewed_by
+       LEFT JOIN reviews rv
+         ON r.target_type = 'review'  AND r.target_id = rv.id
+       LEFT JOIN users rv_au
+         ON rv_au.id = rv.user_id
+       LEFT JOIN review_comments cmt
+         ON r.target_type = 'comment' AND r.target_id = cmt.id
+       LEFT JOIN users cmt_au
+         ON cmt_au.id = cmt.user_id
+       LEFT JOIN reviews cmt_rv
+         ON cmt_rv.id = cmt.review_id
        WHERE r.status = $1
        ORDER BY r.created_at DESC
        LIMIT $2 OFFSET $3`,
