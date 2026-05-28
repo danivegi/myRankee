@@ -1793,6 +1793,8 @@ export default function UserProfilePage({ params }) {
   });
   const tabListRef     = useRef(null);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+  const [tabAtStart,     setTabAtStart]     = useState(true);
+  const [tabAtEnd,       setTabAtEnd]       = useState(false);
   const [profile,        setProfile]        = useState(null);
   const [reviews,        setReviews]        = useState([]);
   const [ratings,        setRatings]        = useState([]);
@@ -1965,12 +1967,26 @@ export default function UserProfilePage({ params }) {
     if (!list) return;
     const btn = list.querySelector(`[data-tab="${tab}"]`);
     if (!btn) return;
-    const listRect = list.getBoundingClientRect();
-    const btnRect  = btn.getBoundingClientRect();
-    setIndicatorStyle({ left: btnRect.left - listRect.left, width: btnRect.width });
+    setIndicatorStyle({ left: btn.offsetLeft, width: btn.offsetWidth });
   }
 
   useEffect(() => { setTimeout(() => updateIndicator(activeTab), 30); }, [activeTab]);
+
+  useEffect(() => {
+    const el = tabListRef.current;
+    if (!el) return;
+    function sync() {
+      setTabAtStart(el.scrollLeft <= 1);
+      setTabAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 1);
+    }
+    sync();
+    el.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', sync);
+      window.removeEventListener('resize', sync);
+    };
+  }, []);
 
   // Lazy-load lists when the Listas tab is first opened
   useEffect(() => {
@@ -2258,34 +2274,52 @@ export default function UserProfilePage({ params }) {
       )}
 
       {/* ── Tabs + Content ── */}
-      <div className="flex flex-col gap-6 px-12">
+      <div className="flex flex-col gap-6 px-4 md:px-12">
 
-        <div className="relative flex border-b border-[#1A1A1A] overflow-x-auto scrollbar-hide" ref={tabListRef}>
-          {/* Sliding active indicator */}
-          <div
-            className="absolute bottom-[-1px] h-[2px] bg-[#A855F7] pointer-events-none"
-            style={{
-              left: indicatorStyle.left,
-              width: indicatorStyle.width,
-              transition: 'left 200ms cubic-bezier(0.4, 0, 0.2, 1), width 200ms cubic-bezier(0.4, 0, 0.2, 1)',
-            }}
-          />
-          {TABS.map((tab) => {
-            const active = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                data-tab={tab}
-                onClick={() => handleTabChange(tab)}
-                className={[
-                  'px-6 py-3 text-sm transition-colors cursor-pointer whitespace-nowrap flex-shrink-0',
-                  active ? 'text-white font-semibold' : 'text-[#71717A] hover:text-white font-normal',
-                ].join(' ')}
-              >
-                {tab}
-              </button>
-            );
-          })}
+        {/* Tabs row with scroll-fade affordance */}
+        <div className="relative">
+          {/* Left edge fade — mobile only, shown when scrolled away from start */}
+          {!tabAtStart && (
+            <div
+              className="md:hidden absolute left-0 top-0 bottom-[1px] w-10 pointer-events-none z-10"
+              style={{ background: 'linear-gradient(to right, #0A0A0A 30%, transparent)' }}
+            />
+          )}
+          {/* Right edge fade — mobile only, shown when more tabs exist to the right */}
+          {!tabAtEnd && (
+            <div
+              className="md:hidden absolute right-0 top-0 bottom-[1px] w-10 pointer-events-none z-10"
+              style={{ background: 'linear-gradient(to left, #0A0A0A 30%, transparent)' }}
+            />
+          )}
+
+          <div className="relative flex border-b border-[#1A1A1A] overflow-x-auto scrollbar-hide" ref={tabListRef}>
+            {/* Sliding active indicator */}
+            <div
+              className="absolute bottom-[-1px] h-[2px] bg-[#A855F7] pointer-events-none"
+              style={{
+                left: indicatorStyle.left,
+                width: indicatorStyle.width,
+                transition: 'left 200ms cubic-bezier(0.4, 0, 0.2, 1), width 200ms cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            />
+            {TABS.map((tab) => {
+              const active = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  data-tab={tab}
+                  onClick={() => handleTabChange(tab)}
+                  className={[
+                    'px-4 md:px-6 py-3 text-sm transition-colors cursor-pointer whitespace-nowrap flex-shrink-0',
+                    active ? 'text-white font-semibold' : 'text-[#71717A] hover:text-white font-normal',
+                  ].join(' ')}
+                >
+                  {tab}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Reseñas tab */}
