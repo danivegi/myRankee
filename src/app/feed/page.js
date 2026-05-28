@@ -330,6 +330,100 @@ function SuggestionsSidebar({ initialItems, token }) {
   );
 }
 
+// ── Mobile: suggestions carousel ─────────────────────────────────────────────
+
+function MobileSuggestionsBlock({ initialItems, token }) {
+  const [items, setItems] = useState(initialItems);
+  useEffect(() => { setItems(initialItems); }, [initialItems]);
+
+  async function handleFollow(username) {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/users/${username}/follow`, {
+        method:  'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setItems((prev) => prev.filter((u) => u.username !== username));
+    } catch { /* non-fatal */ }
+  }
+
+  if (!items.length) return null;
+
+  return (
+    <div className="md:hidden rounded-xl border border-[#2A2A2A] bg-[#0A0A0A] p-4 flex flex-col gap-3">
+      <h2 className={`${anton.className} text-white text-lg`}>Personas que seguir</h2>
+      <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+        {items.map((user) => (
+          <div key={user.id} className="flex flex-col items-center gap-2.5 p-3 rounded-xl border border-[#1A1A1A] bg-[#111111] w-[112px] flex-shrink-0">
+            <Link href={`/user/${user.username}`}>
+              <Avatar user={user} size={40} />
+            </Link>
+            <div className="flex flex-col items-center gap-0.5 w-full">
+              <Link href={`/user/${user.username}`} className="text-white text-xs font-medium leading-tight truncate w-full text-center hover:text-[#A855F7] transition-colors">
+                {user.nombre}
+              </Link>
+              <span className="text-[#71717A] text-[10px]">{user.review_count} reseñas</span>
+            </div>
+            <button
+              onClick={() => handleFollow(user.username)}
+              className="px-2 py-1 rounded-full bg-[#A855F7] text-[#0A0A0A] text-xs font-semibold hover:bg-[#9333EA] transition-colors cursor-pointer w-full"
+            >
+              Seguir
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Mobile: trending block ────────────────────────────────────────────────────
+
+function MobileTrendingBlock({ items }) {
+  if (!items.length) return null;
+  return (
+    <div className="md:hidden rounded-xl border border-[#2A2A2A] bg-[#0A0A0A] p-4 flex flex-col gap-3">
+      <h2 className={`${anton.className} text-white text-lg`}>Tendencias</h2>
+      <div className="flex flex-col gap-2.5">
+        {items.map((item) => (
+          <div key={item.rank} className="flex items-center gap-3">
+            <span className="text-[#3F3F46] text-xl font-bold w-5 text-right flex-shrink-0 leading-none">
+              {item.rank}
+            </span>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <Link href={`/game/${item.igdb_id}`} className="text-white text-sm font-medium truncate hover:text-[#A855F7] transition-colors">
+                {item.title}
+              </Link>
+              <span className="text-[#A855F7] text-xs font-mono">
+                {item.count} {item.count === 1 ? 'valoración' : 'valoraciones'} esta semana
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Interleave helper ─────────────────────────────────────────────────────────
+
+function buildInterleavedFeed(posts) {
+  const entries = [];
+  let suggestionsInserted = false;
+  let trendingInserted    = false;
+
+  posts.forEach((post, i) => {
+    entries.push({ type: 'post', item: post, postIndex: i });
+    if (i === 2) { entries.push({ type: 'suggestions' }); suggestionsInserted = true; }
+    if (i === 5) { entries.push({ type: 'trending' });    trendingInserted    = true; }
+  });
+
+  if (!suggestionsInserted) entries.push({ type: 'suggestions' });
+  if (!trendingInserted)    entries.push({ type: 'trending' });
+
+  return entries;
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 const TABS      = ['Reciente', 'Popular', 'Siguiendo'];
@@ -475,14 +569,31 @@ export default function FeedPage() {
               <p className="text-red-400 text-sm text-center font-mono">{apiError}</p>
             </div>
           ) : items.length === 0 ? (
-            renderEmpty()
+            <>
+              {renderEmpty()}
+              <div className="md:hidden flex flex-col gap-4">
+                <MobileSuggestionsBlock initialItems={suggestions} token={token} />
+                <MobileTrendingBlock items={trending} />
+              </div>
+            </>
           ) : (
             <div className="flex flex-col gap-4">
-              {items.map((item, i) => (
-                <div key={item.id} className="card-fade-up" style={{ animationDelay: `${i * 55}ms` }}>
-                  <FeedCard item={item} token={token} currentUser={currentUser} />
-                </div>
-              ))}
+              {buildInterleavedFeed(items).map((entry) => {
+                if (entry.type === 'post') {
+                  return (
+                    <div key={entry.item.id} className="card-fade-up" style={{ animationDelay: `${entry.postIndex * 55}ms` }}>
+                      <FeedCard item={entry.item} token={token} currentUser={currentUser} />
+                    </div>
+                  );
+                }
+                if (entry.type === 'suggestions') {
+                  return <MobileSuggestionsBlock key="mobile-suggestions" initialItems={suggestions} token={token} />;
+                }
+                if (entry.type === 'trending') {
+                  return <MobileTrendingBlock key="mobile-trending" items={trending} />;
+                }
+                return null;
+              })}
             </div>
           )}
         </main>

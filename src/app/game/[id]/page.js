@@ -159,19 +159,19 @@ export default async function GameDetailPage({ params }) {
       </div>
 
       {/* ── Game Info ── */}
-      <div className="flex gap-8 px-12 pb-10" style={{ marginTop: '-60px' }}>
+      <div className="flex flex-col md:flex-row gap-5 md:gap-8 px-4 md:px-12 pb-10" style={{ marginTop: '-60px' }}>
 
         {/* Cover */}
-        <div className="flex-shrink-0">
-          <div className="relative w-[220px] h-[300px] rounded-xl overflow-hidden shadow-2xl bg-[#141414]">
+        <div className="flex-shrink-0 flex justify-center md:block">
+          <div className="relative w-[160px] h-[218px] md:w-[220px] md:h-[300px] rounded-xl overflow-hidden shadow-2xl bg-[#141414]">
             {game.cover && (
-              <Image src={game.cover} alt={`${game.name} cover`} fill sizes="(max-width: 768px) 100vw, 300px" className="object-cover" priority placeholder="blur" blurDataURL={COVER_BLUR} />
+              <Image src={game.cover} alt={`${game.name} cover`} fill sizes="(max-width: 768px) 160px, 300px" className="object-cover" priority placeholder="blur" blurDataURL={COVER_BLUR} />
             )}
           </div>
         </div>
 
         {/* Details */}
-        <div className="flex flex-col gap-4 pt-16 flex-1 min-w-0">
+        <div className="flex flex-col gap-4 md:pt-16 flex-1 min-w-0">
 
           {/* Title + meta */}
           <div className="flex flex-col gap-1">
