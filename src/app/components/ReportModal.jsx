@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useToast } from './ToastProvider';
 
 const REASONS = [
@@ -16,6 +17,13 @@ export default function ReportModal({ targetType, targetId, onClose }) {
   const [reason, setReason]           = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading]         = useState(false);
+  const [mounted, setMounted]         = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -42,13 +50,15 @@ export default function ReportModal({ targetType, targetId, onClose }) {
     }
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-md rounded-2xl border border-[#1A1A1A] bg-[#111111] p-6 flex flex-col gap-5">
+      <div className="w-full max-w-md rounded-2xl border border-[#1A1A1A] bg-[#111111] p-6 flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="text-white font-semibold text-base">Reportar contenido</h2>
           <button onClick={onClose} className="text-[#71717A] hover:text-white transition-colors" aria-label="Cerrar">
@@ -108,6 +118,7 @@ export default function ReportModal({ targetType, targetId, onClose }) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
