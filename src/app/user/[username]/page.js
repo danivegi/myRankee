@@ -990,11 +990,20 @@ function ChartCard({ title, subtitle, children }) {
 }
 
 function StatsTab({ username, isOwner }) {
-  const [stats,   setStats]   = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const [stats,     setStats]     = useState(null);
+  const [loading,   setLoading]   = useState(true);
+  const [mounted,   setMounted]   = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true); // SSR-safe default
 
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    setIsDesktop(mq.matches);
+    const handler = (e) => setIsDesktop(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   useEffect(() => {
     fetch(`/api/users/${username}/stats`)
@@ -1058,28 +1067,38 @@ function StatsTab({ username, isOwner }) {
         {stats.topGenres.length > 0 ? (
           <ChartCard title="Géneros más jugados" subtitle="Top 5 géneros por número de juegos valorados">
             {mounted && (
-              <div className="relative">
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie
-                      data={stats.topGenres}
-                      cx="50%" cy="45%"
-                      innerRadius={52} outerRadius={80}
-                      dataKey="count" nameKey="name"
-                      paddingAngle={3}
-                    >
-                      {stats.topGenres.map((_, i) => <Cell key={i} fill={PURPLE_SHADES[i]} />)}
-                    </Pie>
-                    <Tooltip contentStyle={TOOLTIP_STYLE} />
-                    <Legend
-                      iconType="circle" iconSize={8}
-                      formatter={(v) => <span style={{ color: '#A0A0A0', fontSize: 11 }}>{v}</span>}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute top-[35%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                  <p className="text-white text-2xl font-bold leading-none">{stats.totalRated}</p>
-                  <p className="text-[#71717A] text-[10px] mt-0.5">juegos</p>
+              <div className="flex flex-col gap-3">
+                {/* Chart — Legend removed from SVG so cy="50%" = exact container midpoint */}
+                <div className="relative">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                      <Pie
+                        data={stats.topGenres}
+                        cx="50%" cy="50%"
+                        innerRadius={isDesktop ? 52 : '42%'}
+                        outerRadius={isDesktop ? 80 : '60%'}
+                        dataKey="count" nameKey="name"
+                        paddingAngle={3}
+                      >
+                        {stats.topGenres.map((_, i) => <Cell key={i} fill={PURPLE_SHADES[i]} />)}
+                      </Pie>
+                      <Tooltip contentStyle={TOOLTIP_STYLE} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* HTML overlay: top-1/2 = 110px = cy of the ring (50% of 220px container) */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                    <p className="text-white text-2xl font-bold leading-none">{stats.totalRated}</p>
+                    <p className="text-[#71717A] text-[10px] mt-0.5">juegos</p>
+                  </div>
+                </div>
+                {/* Legend rendered as HTML so it doesn't displace the pie center inside the SVG */}
+                <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
+                  {stats.topGenres.map((entry, i) => (
+                    <div key={entry.name} className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: PURPLE_SHADES[i] }} />
+                      <span style={{ color: '#A0A0A0', fontSize: 11 }}>{entry.name}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
