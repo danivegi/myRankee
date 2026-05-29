@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
@@ -225,6 +225,26 @@ export default function ListsPage() {
   const [hasMore, setHasMore] = useState(false);
   const [createModal, setCreateModal] = useState(false);
 
+  const tabListRef  = useRef(null);
+  const [tabAtStart, setTabAtStart] = useState(true);
+  const [tabAtEnd,   setTabAtEnd]   = useState(false);
+
+  useEffect(() => {
+    const el = tabListRef.current;
+    if (!el) return;
+    function sync() {
+      setTabAtStart(el.scrollLeft <= 1);
+      setTabAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 1);
+    }
+    sync();
+    el.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', sync);
+      window.removeEventListener('resize', sync);
+    };
+  }, []);
+
   // Load user on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -310,10 +330,10 @@ export default function ListsPage() {
     <div className={`${inter.className} min-h-screen bg-[#0A0A0A] w-full`}>
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-12">
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-10">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-10">
           <div>
             <h1 className={`${anton.className} text-white text-[44px] leading-none`}>
               Listas de Videojuegos
@@ -325,7 +345,7 @@ export default function ListsPage() {
           {user && (
             <button
               onClick={() => setCreateModal(true)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#A855F7] text-[#0A0A0A] text-sm font-semibold hover:bg-[#9333EA] transition-colors cursor-pointer flex-shrink-0 mt-2"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#A855F7] text-[#0A0A0A] text-sm font-semibold hover:bg-[#9333EA] transition-colors cursor-pointer flex-shrink-0 self-end sm:self-auto sm:mt-2"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -336,20 +356,37 @@ export default function ListsPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-0 mb-8 border-b border-[#1A1A1A]">
-          {TABS.filter((tab) => !tab.authOnly || user).map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => handleTabChange(tab.key)}
-              className={`px-5 py-3 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-px ${
-                activeTab === tab.key
-                  ? 'border-[#A855F7] text-[#A855F7]'
-                  : 'border-transparent text-[#71717A] hover:text-white'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="relative mb-8">
+          {!tabAtStart && (
+            <div
+              className="md:hidden absolute left-0 top-0 bottom-[1px] w-8 pointer-events-none z-10"
+              style={{ background: 'linear-gradient(to right, #0A0A0A 30%, transparent)' }}
+            />
+          )}
+          {!tabAtEnd && (
+            <div
+              className="md:hidden absolute right-0 top-0 bottom-[1px] w-8 pointer-events-none z-10"
+              style={{ background: 'linear-gradient(to left, #0A0A0A 30%, transparent)' }}
+            />
+          )}
+          <div
+            ref={tabListRef}
+            className="flex items-center gap-0 border-b border-[#1A1A1A] overflow-x-auto scrollbar-hide"
+          >
+            {TABS.filter((tab) => !tab.authOnly || user).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => handleTabChange(tab.key)}
+                className={`px-5 py-3 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-px whitespace-nowrap flex-shrink-0 ${
+                  activeTab === tab.key
+                    ? 'border-[#A855F7] text-[#A855F7]'
+                    : 'border-transparent text-[#71717A] hover:text-white'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Lists grid */}
