@@ -56,7 +56,7 @@ function ListCard({ list, tall }) {
   return (
     <Link
       href={`/lists/${list.id}`}
-      className={`relative rounded-xl overflow-hidden block hover:scale-[1.02] transition-all duration-200 border border-transparent hover:border-[#A855F7] ${tall ? 'h-64' : 'h-48'}`}
+      className={`relative rounded-xl overflow-hidden block hover:scale-[1.02] transition-all duration-200 border border-transparent hover:border-[#A855F7] ${tall ? 'h-48 sm:h-64' : 'h-48'}`}
     >
       <CoverCollage covers={list.covers} />
 
@@ -398,12 +398,12 @@ export default function ListsPage() {
           </div>
         ) : (
           <>
-            {/* Alternating 3-wide / 2-tall grid using 6 columns */}
-            <div className="grid grid-cols-6 gap-4">
+            {/* Alternating 3-wide / 2-tall grid using 6 columns (single column on mobile) */}
+            <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
               {lists.map((list, i) => {
                 const tall = i % 5 >= 3;
                 return (
-                  <div key={list.id} className={tall ? 'col-span-3' : 'col-span-2'}>
+                  <div key={list.id} className={tall ? 'col-span-1 sm:col-span-3' : 'col-span-1 sm:col-span-2'}>
                     <ListCard list={list} tall={tall} />
                   </div>
                 );

@@ -398,7 +398,7 @@ export default function ListDetailPage({ params }) {
     <div className={`${inter.className} min-h-screen bg-[#0A0A0A] w-full`}>
       <Navbar />
 
-      <div className="max-w-6xl mx-auto px-8 py-10">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-10">
 
         {/* Breadcrumb */}
         <Link href="/lists" className="inline-flex items-center gap-2 text-[#71717A] text-sm hover:text-white transition-colors mb-8">
@@ -409,7 +409,7 @@ export default function ListDetailPage({ params }) {
         </Link>
 
         {/* Header */}
-        <div className="flex items-start justify-between gap-6 mb-8">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6 mb-8">
           <div className="flex-1 min-w-0">
             <h1 className={`${anton.className} text-white text-[38px] leading-tight mb-2`}>{list.title}</h1>
             {list.description && (
@@ -444,7 +444,7 @@ export default function ListDetailPage({ params }) {
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col gap-2 flex-shrink-0 mt-2">
+          <div className="flex flex-wrap gap-2 md:flex-col md:flex-nowrap md:flex-shrink-0 md:mt-2">
             {!isOwner && (
               <button
                 onClick={handleFollow}
