@@ -56,7 +56,7 @@ export default function TermsPage() {
           <h1 className={`${anton.className} text-white text-4xl md:text-5xl leading-none`}>
             Términos de Servicio
           </h1>
-          <p className="text-[#71717A] text-sm">Última actualización: 29 de abril de 2026</p>
+          <p className="text-[#71717A] text-sm">Última actualización: 29 de mayo de 2026</p>
         </div>
 
         <div className="flex gap-12">
@@ -173,9 +173,7 @@ export default function TermsPage() {
 
             <Section id="propiedad" title="Propiedad intelectual de myRankee">
               <P>
-                El diseño, código fuente, logotipos, marcas, gráficos y demás elementos de myRankee son
-                propiedad exclusiva de myRankee o de sus licenciatarios y están protegidos por la legislación
-                de propiedad intelectual.
+                El diseño, código fuente, logotipos, marcas, gráficos y demás elementos de myRankee son propiedad exclusiva de Daniel Vega Alcázar (titular de la plataforma myRankee) o de sus licenciatarios, y están protegidos por la legislación de propiedad intelectual.
               </P>
               <P>
                 Los datos de videojuegos (portadas, descripciones, metadatos) son proporcionados por

@@ -16,7 +16,9 @@ const SECTIONS = [
   { id: 'uso',            label: '¿Para qué usamos tus datos?' },
   { id: 'compartir',      label: '¿Con quién los compartimos?' },
   { id: 'retencion',      label: 'Retención de datos' },
-  { id: 'derechos',       label: 'Tus derechos GDPR' },
+  { id: 'derechos',       label: 'Tus derechos (RGPD)' },
+  { id: 'edad',           label: 'Edad mínima' },
+  { id: 'cambios',        label: 'Cambios en esta política' },
   { id: 'contacto',       label: 'Contacto' },
 ];
 
@@ -54,7 +56,7 @@ export default function PrivacyPage() {
           <h1 className={`${anton.className} text-white text-4xl md:text-5xl leading-none`}>
             Política de Privacidad
           </h1>
-          <p className="text-[#71717A] text-sm">Última actualización: 29 de abril de 2026</p>
+          <p className="text-[#71717A] text-sm">Última actualización: 29 de mayo de 2026</p>
         </div>
 
         <div className="flex gap-12">
@@ -84,9 +86,9 @@ export default function PrivacyPage() {
                 personales que recopilamos a través de esta plataforma.
               </P>
               <P>
-                <strong className="text-white">Responsable del tratamiento:</strong> myRankee<br />
-                <strong className="text-white">Correo de contacto:</strong> privacidad@myrankee.com<br />
-                <strong className="text-white">Ámbito de aplicación:</strong> Unión Europea y resto del mundo
+                <strong className="text-white">Responsable del tratamiento:</strong> Daniel Vega Alcázar, responsable de la plataforma myRankee.<br />
+                <strong className="text-white">Correo de contacto:</strong> myrankee@gmail.com<br />
+                <strong className="text-white">Ámbito de aplicación:</strong> Unión Europea y resto del mundo.
               </P>
             </Section>
 
@@ -135,13 +137,23 @@ export default function PrivacyPage() {
             </Section>
 
             <Section id="uso" title="¿Para qué usamos tus datos?">
+              <P>Tratamos tus datos personales sobre las siguientes bases legales:</P>
               <ul className="flex flex-col gap-1.5">
-                <Li>Prestar el servicio y gestionar tu cuenta de usuario</Li>
-                <Li>Enviarte correos de verificación de email y recuperación de contraseña</Li>
-                <Li>Mostrarte contenido relevante de la comunidad (reseñas, puntuaciones)</Li>
-                <Li>Detectar y prevenir actividades fraudulentas o abusivas</Li>
-                <Li>Mejorar el servicio mediante análisis de uso agregado y anónimo</Li>
-                <Li>Cumplir con obligaciones legales</Li>
+                <Li>
+                  <strong className="text-white">Prestar el servicio y gestionar tu cuenta de usuario</strong> — Base legal: ejecución del contrato (art. 6.1.b RGPD). Necesario para crear y mantener tu cuenta y permitirte usar la plataforma.
+                </Li>
+                <Li>
+                  <strong className="text-white">Enviarte correos de verificación de email y recuperación de contraseña</strong> — Base legal: ejecución del contrato (art. 6.1.b RGPD).
+                </Li>
+                <Li>
+                  <strong className="text-white">Mostrar contenido de la comunidad</strong> (tus reseñas, puntuaciones y listas a otros usuarios) — Base legal: ejecución del contrato (art. 6.1.b RGPD), ya que es la finalidad esencial de una plataforma social de reseñas.
+                </Li>
+                <Li>
+                  <strong className="text-white">Detectar y prevenir actividades fraudulentas o abusivas</strong> (incluido el uso de tu dirección IP y registros de seguridad) — Base legal: interés legítimo (art. 6.1.f RGPD) en garantizar la seguridad de la plataforma y de sus usuarios.
+                </Li>
+                <Li>
+                  <strong className="text-white">Cumplir con obligaciones legales</strong> — Base legal: cumplimiento de una obligación legal (art. 6.1.c RGPD).
+                </Li>
               </ul>
               <P>
                 No utilizamos tus datos para publicidad personalizada. No vendemos tus datos a terceros.
@@ -151,30 +163,35 @@ export default function PrivacyPage() {
             <Section id="compartir" title="¿Con quién compartimos tus datos?">
               <P>
                 Compartimos datos únicamente con los siguientes proveedores de servicios, que actúan como
-                encargados del tratamiento bajo contratos de protección de datos:
+                encargados del tratamiento bajo los correspondientes contratos de protección de datos:
               </P>
               <ul className="flex flex-col gap-1.5">
                 <Li>
-                  <strong className="text-white">IGDB (Twitch/Amazon):</strong> Consultamos su API para
-                  obtener información de videojuegos. No enviamos datos de usuario.
+                  <strong className="text-white">Supabase (alojamiento de base de datos):</strong> almacenamos tus datos en una base de datos PostgreSQL gestionada por Supabase, con cifrado en reposo. La infraestructura de tu base de datos está ubicada en la Unión Europea (Frankfurt, Alemania).
                 </Li>
                 <Li>
-                  <strong className="text-white">Resend:</strong> Plataforma de envío de emails transaccionales
-                  (verificación de cuenta, recuperación de contraseña). Recibe tu dirección de email únicamente
-                  para estos fines.
+                  <strong className="text-white">Vercel (alojamiento de la aplicación):</strong> procesa las solicitudes del servidor para servir la plataforma. Vercel opera desde Estados Unidos.
                 </Li>
                 <Li>
-                  <strong className="text-white">Vercel:</strong> Plataforma de alojamiento de la aplicación.
-                  Procesa las solicitudes del servidor.
+                  <strong className="text-white">Resend (envío de emails transaccionales):</strong> recibe tu dirección de email únicamente para enviarte correos de verificación de cuenta y recuperación de contraseña. Resend opera desde Estados Unidos.
                 </Li>
                 <Li>
-                  <strong className="text-white">Proveedor de base de datos:</strong> Almacenamos tus datos en
-                  una base de datos PostgreSQL gestionada con cifrado en reposo.
+                  <strong className="text-white">hCaptcha (protección anti-bot):</strong> se utiliza en el registro y el inicio de sesión para prevenir accesos automatizados y abuso. Para ello, hCaptcha puede procesar datos técnicos como tu dirección IP e información sobre tu navegador. hCaptcha opera desde Estados Unidos.
                 </Li>
               </ul>
               <P>
-                No transferimos datos fuera del Espacio Económico Europeo sin las garantías adecuadas.
+                <strong className="text-white">Datos de videojuegos:</strong> consultamos la API de IGDB (Twitch Interactive, Inc.) para obtener información de videojuegos (portadas, sinopsis, géneros, plataformas). No enviamos datos personales de usuario a IGDB. Las sinopsis se traducen al español mediante el servicio de DeepL, al que únicamente se envía el texto de la sinopsis del videojuego, nunca datos personales de los usuarios.
               </P>
+
+              <div className="flex flex-col gap-2 mt-1">
+                <p className="text-white text-sm font-semibold">Transferencias internacionales de datos</p>
+                <P>
+                  Tu base de datos principal está alojada en la Unión Europea (Frankfurt, Alemania). No obstante, algunos de nuestros proveedores (Vercel, Resend y hCaptcha) están ubicados en Estados Unidos, por lo que determinados datos pueden ser tratados fuera del Espacio Económico Europeo.
+                </P>
+                <P>
+                  En esos casos, las transferencias se realizan con las garantías adecuadas previstas por el RGPD, como las Cláusulas Contractuales Tipo aprobadas por la Comisión Europea o la adhesión de dichos proveedores al marco EU-U.S. Data Privacy Framework, según corresponda en cada caso.
+                </P>
+              </div>
             </Section>
 
             <Section id="retencion" title="Retención de datos">
@@ -199,7 +216,7 @@ export default function PrivacyPage() {
               </ul>
             </Section>
 
-            <Section id="derechos" title="Tus derechos GDPR">
+            <Section id="derechos" title="Tus derechos (RGPD)">
               <P>
                 En virtud del Reglamento General de Protección de Datos (RGPD), tienes los siguientes
                 derechos sobre tus datos personales:
@@ -211,6 +228,7 @@ export default function PrivacyPage() {
                 <Li><strong className="text-white">Portabilidad:</strong> Recibir tus datos en formato estructurado (JSON).</Li>
                 <Li><strong className="text-white">Oposición:</strong> Oponerte al tratamiento de tus datos para determinadas finalidades.</Li>
                 <Li><strong className="text-white">Limitación:</strong> Solicitar que limitemos el tratamiento de tus datos.</Li>
+                <Li><strong className="text-white">Retirar el consentimiento:</strong> cuando un tratamiento se base en tu consentimiento, puedes retirarlo en cualquier momento, sin que ello afecte a la licitud del tratamiento previo a su retirada.</Li>
               </ul>
 
               <div className="p-4 rounded-xl border border-[#A855F7]/30 bg-[#A855F7]/5 mt-2">
@@ -225,7 +243,7 @@ export default function PrivacyPage() {
                     <Link href="/settings" className="text-[#A855F7] hover:underline">Configuración → Eliminar cuenta</Link>
                   </Li>
                   <Li>
-                    <strong className="text-white">Otros derechos:</strong> Escríbenos a privacidad@myrankee.com
+                    <strong className="text-white">Otros derechos:</strong> Escríbenos a myrankee@gmail.com
                   </Li>
                 </ul>
               </div>
@@ -237,6 +255,21 @@ export default function PrivacyPage() {
               </P>
             </Section>
 
+            <Section id="edad" title="Edad mínima">
+              <P>
+                Para registrarte y crear una cuenta en myRankee debes tener al menos 14 años, de acuerdo con la legislación española en materia de protección de datos. Durante el registro deberás confirmar que cumples este requisito de edad.
+              </P>
+              <P>
+                Si tienes conocimiento de que un menor de 14 años nos ha facilitado datos personales, te rogamos que nos lo comuniques en myrankee@gmail.com para proceder a su eliminación.
+              </P>
+            </Section>
+
+            <Section id="cambios" title="Cambios en esta política de privacidad">
+              <P>
+                Podemos actualizar esta política de privacidad ocasionalmente para reflejar cambios en el servicio o en la legislación aplicable. Cuando realicemos cambios significativos, te lo notificaremos por los medios apropiados (por ejemplo, mediante un aviso en la plataforma) antes de que entren en vigor. La fecha de &lsquo;Última actualización&rsquo; al inicio de esta página indica cuándo se revisó por última vez.
+              </P>
+            </Section>
+
             <Section id="contacto" title="Contacto">
               <P>
                 Para cualquier consulta sobre esta política de privacidad o el tratamiento de tus datos
@@ -244,7 +277,7 @@ export default function PrivacyPage() {
               </P>
               <div className="p-4 rounded-xl border border-[#1A1A1A] bg-[#111111]">
                 <p className="text-white text-sm font-semibold">myRankee — Privacidad</p>
-                <p className="text-[#71717A] text-sm mt-1">privacidad@myrankee.com</p>
+                <p className="text-[#71717A] text-sm mt-1">myrankee@gmail.com</p>
               </div>
               <P>
                 Nos comprometemos a responder en un plazo máximo de 30 días.

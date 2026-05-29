@@ -62,7 +62,7 @@ export default function CookiesPage() {
           <h1 className={`${anton.className} text-white text-4xl md:text-5xl leading-none`}>
             Política de Cookies
           </h1>
-          <p className="text-[#71717A] text-sm">Última actualización: 29 de abril de 2026</p>
+          <p className="text-[#71717A] text-sm">Última actualización: 29 de mayo de 2026</p>
         </div>
 
         <div className="flex gap-12">
@@ -212,7 +212,7 @@ export default function CookiesPage() {
               </div>
               <P>
                 ¿Tienes dudas? Escríbenos a{' '}
-                <span className="text-white">privacidad@myrankee.com</span>
+                <span className="text-white">myrankee@gmail.com</span>
               </P>
             </Section>
 
