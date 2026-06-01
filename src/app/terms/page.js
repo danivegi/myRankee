@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 export const metadata = {
   title: 'Términos de Servicio',
-  description: 'Términos y condiciones de uso de myRankee.',
+  description: 'Términos y condiciones de uso de MyRankee.',
 };
 
 const SECTIONS = [
@@ -79,7 +79,7 @@ export default function TermsPage() {
 
             <Section id="aceptacion" title="Aceptación de los términos">
               <P>
-                Al acceder o usar myRankee, aceptas estos Términos de Servicio en su totalidad. Si no estás
+                Al acceder o usar MyRankee, aceptas estos Términos de Servicio en su totalidad. Si no estás
                 de acuerdo con alguna parte de estos términos, no podrás acceder al servicio.
               </P>
               <P>
@@ -92,7 +92,7 @@ export default function TermsPage() {
 
             <Section id="descripcion" title="Descripción del servicio">
               <P>
-                myRankee es una plataforma online que permite a los usuarios descubrir videojuegos, asignar
+                MyRankee es una plataforma online que permite a los usuarios descubrir videojuegos, asignar
                 puntuaciones, escribir reseñas, crear listas personalizadas y conectar con otros jugadores.
               </P>
               <P>
@@ -135,10 +135,10 @@ export default function TermsPage() {
             <Section id="contenido" title="Contenido del usuario">
               <P>
                 <strong className="text-white">Propiedad:</strong> Eres el titular de las reseñas, comentarios
-                y listas que publicas en myRankee. No te cedemos ningún derecho sobre ellos.
+                y listas que publicas en MyRankee. No te cedemos ningún derecho sobre ellos.
               </P>
               <P>
-                <strong className="text-white">Licencia de uso:</strong> Al publicar contenido en myRankee,
+                <strong className="text-white">Licencia de uso:</strong> Al publicar contenido en MyRankee,
                 nos otorgas una licencia no exclusiva, mundial, libre de regalías y sublicenciable para
                 mostrar, distribuir y reproducir dicho contenido dentro de la plataforma, incluyendo en
                 vistas de otros usuarios y en resultados de búsqueda.
@@ -162,7 +162,7 @@ export default function TermsPage() {
                 <Li>Suplante la identidad de otra persona o entidad.</Li>
                 <Li>Promueva discriminación por raza, género, orientación sexual, religión o nacionalidad.</Li>
                 <Li>Contenga malware, virus o código diseñado para dañar sistemas informáticos.</Li>
-                <Li>Trate de hackear, hacer scraping masivo o sobrecargar los servidores de myRankee.</Li>
+                <Li>Trate de hackear, hacer scraping masivo o sobrecargar los servidores de MyRankee.</Li>
                 <Li>Publique datos personales de terceros sin su consentimiento.</Li>
               </ul>
               <P>
@@ -171,23 +171,23 @@ export default function TermsPage() {
               </P>
             </Section>
 
-            <Section id="propiedad" title="Propiedad intelectual de myRankee">
+            <Section id="propiedad" title="Propiedad intelectual de MyRankee">
               <P>
-                El diseño, código fuente, logotipos, marcas, gráficos y demás elementos de myRankee son propiedad exclusiva de Daniel Vega Alcázar (titular de la plataforma myRankee) o de sus licenciatarios, y están protegidos por la legislación de propiedad intelectual.
+                El diseño, código fuente, logotipos, marcas, gráficos y demás elementos de MyRankee son propiedad exclusiva de Daniel Vega Alcázar (titular de la plataforma MyRankee) o de sus licenciatarios, y están protegidos por la legislación de propiedad intelectual.
               </P>
               <P>
                 Los datos de videojuegos (portadas, descripciones, metadatos) son proporcionados por
                 IGDB (Twitch Interactive, Inc.) bajo sus propios términos de uso.
               </P>
               <P>
-                No puedes copiar, modificar, distribuir ni usar el contenido propiedad de myRankee sin
+                No puedes copiar, modificar, distribuir ni usar el contenido propiedad de MyRankee sin
                 autorización escrita previa.
               </P>
             </Section>
 
             <Section id="responsabilidad" title="Limitación de responsabilidad">
               <P>
-                myRankee se ofrece <strong className="text-white">"tal cual"</strong> y{' '}
+                MyRankee se ofrece <strong className="text-white">"tal cual"</strong> y{' '}
                 <strong className="text-white">"según disponibilidad"</strong>. No garantizamos que el
                 servicio sea ininterrumpido, seguro o libre de errores.
               </P>
@@ -224,7 +224,7 @@ export default function TermsPage() {
                 Te notificaremos con al menos 30 días de antelación ante cambios significativos en estos términos.
               </P>
               <P>
-                El uso continuado de myRankee tras la publicación de cambios constituye la aceptación
+                El uso continuado de MyRankee tras la publicación de cambios constituye la aceptación
                 de los nuevos términos.
               </P>
             </Section>

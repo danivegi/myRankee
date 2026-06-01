@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 export const metadata = {
   title: 'Política de Privacidad',
-  description: 'Política de privacidad de myRankee. Cómo recogemos, usamos y protegemos tus datos personales.',
+  description: 'Política de privacidad de MyRankee. Cómo recogemos, usamos y protegemos tus datos personales.',
 };
 
 const SECTIONS = [
@@ -81,12 +81,12 @@ export default function PrivacyPage() {
 
             <Section id="quien-somos" title="¿Quiénes somos?">
               <P>
-                myRankee es una comunidad online de videojuegos que permite a los usuarios puntuar, reseñar
+                MyRankee es una comunidad online de videojuegos que permite a los usuarios puntuar, reseñar
                 y compartir su experiencia con juegos. Somos el responsable del tratamiento de los datos
                 personales que recopilamos a través de esta plataforma.
               </P>
               <P>
-                <strong className="text-white">Responsable del tratamiento:</strong> Daniel Vega Alcázar, responsable de la plataforma myRankee.<br />
+                <strong className="text-white">Responsable del tratamiento:</strong> Daniel Vega Alcázar, responsable de la plataforma MyRankee.<br />
                 <strong className="text-white">Correo de contacto:</strong> myrankee@gmail.com<br />
                 <strong className="text-white">Ámbito de aplicación:</strong> Unión Europea y resto del mundo.
               </P>
@@ -257,7 +257,7 @@ export default function PrivacyPage() {
 
             <Section id="edad" title="Edad mínima">
               <P>
-                Para registrarte y crear una cuenta en myRankee debes tener al menos 14 años, de acuerdo con la legislación española en materia de protección de datos. Durante el registro deberás confirmar que cumples este requisito de edad.
+                Para registrarte y crear una cuenta en MyRankee debes tener al menos 14 años, de acuerdo con la legislación española en materia de protección de datos. Durante el registro deberás confirmar que cumples este requisito de edad.
               </P>
               <P>
                 Si tienes conocimiento de que un menor de 14 años nos ha facilitado datos personales, te rogamos que nos lo comuniques en myrankee@gmail.com para proceder a su eliminación.
@@ -276,7 +276,7 @@ export default function PrivacyPage() {
                 personales, puedes contactarnos en:
               </P>
               <div className="p-4 rounded-xl border border-[#1A1A1A] bg-[#111111]">
-                <p className="text-white text-sm font-semibold">myRankee — Privacidad</p>
+                <p className="text-white text-sm font-semibold">MyRankee — Privacidad</p>
                 <p className="text-[#71717A] text-sm mt-1">myrankee@gmail.com</p>
               </div>
               <P>

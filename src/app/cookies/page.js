@@ -7,14 +7,14 @@ const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 export const metadata = {
   title: 'Política de Cookies',
-  description: 'Cómo usa myRankee las cookies y tecnologías similares.',
+  description: 'Cómo usa MyRankee las cookies y tecnologías similares.',
 };
 
 const SECTIONS = [
   { id: 'que-son',      label: '¿Qué son las cookies?' },
   { id: 'tipos',        label: 'Cookies que usamos' },
   { id: 'gestion',      label: 'Gestión en el navegador' },
-  { id: 'preferencias', label: 'Preferencias en myRankee' },
+  { id: 'preferencias', label: 'Preferencias en MyRankee' },
 ];
 
 function Section({ id, title, children }) {
@@ -90,7 +90,7 @@ export default function CookiesPage() {
                 tu sesión iniciada o tus preferencias.
               </P>
               <P>
-                myRankee también utiliza tecnologías similares como <strong className="text-white">localStorage</strong>,
+                MyRankee también utiliza tecnologías similares como <strong className="text-white">localStorage</strong>,
                 que es un almacenamiento local del navegador que funciona de forma parecida a las cookies pero
                 no se envía automáticamente al servidor con cada solicitud.
               </P>
@@ -103,7 +103,7 @@ export default function CookiesPage() {
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
                 <p className="text-[#9CA3AF] text-sm leading-relaxed">
-                  myRankee <strong className="text-white">solo usa almacenamiento esencial</strong> para el
+                  MyRankee <strong className="text-white">solo usa almacenamiento esencial</strong> para el
                   funcionamiento básico del servicio. No usamos cookies de seguimiento, analíticas de terceros
                   ni publicidad.
                 </p>
@@ -175,14 +175,14 @@ export default function CookiesPage() {
                 ))}
               </div>
               <P>
-                Ten en cuenta que borrar las cookies eliminará también tu sesión en myRankee, por lo que
+                Ten en cuenta que borrar las cookies eliminará también tu sesión en MyRankee, por lo que
                 tendrás que iniciar sesión de nuevo.
               </P>
             </Section>
 
-            <Section id="preferencias" title="Preferencias en myRankee">
+            <Section id="preferencias" title="Preferencias en MyRankee">
               <P>
-                Puedes gestionar tus preferencias directamente desde myRankee:
+                Puedes gestionar tus preferencias directamente desde MyRankee:
               </P>
               <div className="flex flex-col gap-3">
                 <div className="p-4 rounded-xl border border-[#1A1A1A] bg-[#111111] flex items-center justify-between gap-4">
