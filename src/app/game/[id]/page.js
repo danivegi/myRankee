@@ -13,6 +13,48 @@ const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 const COVER_BLUR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScAAAAAElFTkSuQmCC';
 
+// Platform name (post-translatePlatform) → border color by console family.
+// Fallback for unmapped platforms: '#2A2A2A' (neutral gray).
+const PLATFORM_BORDER = {
+  // PlayStation
+  'PlayStation 5':    '#0070D1',
+  'PlayStation 4':    '#0070D1',
+  'PlayStation 3':    '#0070D1',
+  'PlayStation 2':    '#0070D1',
+  'PlayStation':      '#0070D1',
+  'PS Vita':          '#0070D1',
+  'PSP':              '#0070D1',
+  // Xbox
+  'Xbox Series X|S':  '#107C10',
+  'Xbox One':         '#107C10',
+  'Xbox 360':         '#107C10',
+  'Xbox':             '#107C10',
+  // Nintendo home
+  'Nintendo Switch':  '#E60012',
+  'Wii U':            '#E60012',
+  'Wii':              '#E60012',
+  'GameCube':         '#E60012',
+  'Nintendo 64':      '#E60012',
+  'SNES':             '#E60012',
+  'NES':              '#E60012',
+  // Nintendo handheld
+  'Game Boy Advance': '#A60010',
+  'Game Boy Color':   '#A60010',
+  'Game Boy':         '#A60010',
+  'Nintendo DS':      '#A60010',
+  'Nintendo 3DS':     '#A60010',
+  // PC
+  'PC':               '#6E7B8B',
+  // Sega (both spellings — translatePlatform maps to "Mega Drive", search uses "Mega Drive/Genesis")
+  'Dreamcast':        '#0089CF',
+  'Saturn':           '#0089CF',
+  'Mega Drive':       '#0089CF',
+  'Mega Drive/Genesis': '#0089CF',
+  // Mobile
+  'Android':          '#3DDC84',
+  'iOS':              '#3DDC84',
+};
+
 // Memoized IGDB fetch — shared between generateMetadata and the page render
 const fetchGame = cache(async (id) => {
   return queryIGDB(
@@ -202,15 +244,29 @@ export default async function GameDetailPage({ params }) {
           )}
 
           {/* Genre + platform tags */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {[
-              ...game.genres.map((name) => ({ type: 'genre', name })),
-              ...game.platforms.slice(0, 3).map((name) => ({ type: 'platform', name })),
-            ].map(({ type, name }) => (
-              <span key={`${type}-${name}`} className="px-3 py-1 rounded-full bg-[#1A1A1A] text-[#71717A] text-[11px] font-mono border border-[#1A1A1A]">
-                {name}
-              </span>
-            ))}
+          <div className="flex flex-col gap-2">
+            {game.genres.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {game.genres.map((name) => (
+                  <span key={name} className="px-3 py-1 rounded-full bg-[#1A1A1A] text-[#71717A] text-[11px] font-mono border border-[#A855F7]/40">
+                    {name}
+                  </span>
+                ))}
+              </div>
+            )}
+            {game.platforms.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {game.platforms.slice(0, 3).map((name) => (
+                  <span
+                    key={name}
+                    className="px-3 py-1 rounded-full bg-[#1A1A1A] text-[#71717A] text-[11px] font-mono border"
+                    style={{ borderColor: PLATFORM_BORDER[name] ?? '#2A2A2A' }}
+                  >
+                    {name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Summary */}
