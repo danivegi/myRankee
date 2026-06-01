@@ -68,25 +68,44 @@ export async function POST(request) {
   const { igdb_game_id, content } = data;
   const safeContent = sanitizeText(content);
 
-  const result = await pool.query(
-    `INSERT INTO reviews (user_id, igdb_game_id, content)
-     VALUES ($1, $2, $3)
-     RETURNING id, content, created_at`,
-    [user.id, igdb_game_id, safeContent]
+  const existing = await pool.query(
+    'SELECT id FROM reviews WHERE user_id = $1 AND igdb_game_id = $2',
+    [user.id, igdb_game_id]
   );
 
-  const review = result.rows[0];
+  let review;
+  if (existing.rows.length > 0) {
+    const updated = await pool.query(
+      `UPDATE reviews SET content = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, content, created_at`,
+      [safeContent, existing.rows[0].id]
+    );
+    review = updated.rows[0];
+    pool.query(
+      `UPDATE activity SET metadata = $3::jsonb
+       WHERE type = 'review' AND user_id = $1 AND (metadata->>'review_id')::int = $2`,
+      [user.id, review.id, JSON.stringify({ content: safeContent, review_id: review.id })]
+    ).catch(() => {});
+  } else {
+    const inserted = await pool.query(
+      `INSERT INTO reviews (user_id, igdb_game_id, content)
+       VALUES ($1, $2, $3)
+       RETURNING id, content, created_at`,
+      [user.id, igdb_game_id, safeContent]
+    );
+    review = inserted.rows[0];
+    pool.query(
+      `INSERT INTO activity (user_id, igdb_game_id, type, metadata)
+       VALUES ($1, $2, 'review', $3::jsonb)`,
+      [user.id, igdb_game_id, JSON.stringify({ content: safeContent, review_id: review.id })]
+    ).catch(() => {});
+  }
 
   const userRow = await pool.query(
     'SELECT username, nombre, apellido, avatar_url FROM users WHERE id = $1',
     [user.id]
   );
-
-  pool.query(
-    `INSERT INTO activity (user_id, igdb_game_id, type, metadata)
-     VALUES ($1, $2, 'review', $3::jsonb)`,
-    [user.id, igdb_game_id, JSON.stringify({ content: safeContent, review_id: review.id })]
-  ).catch(() => {});
 
   const newAchievements = await checkAndUnlockAchievements(user.id);
 

@@ -13,6 +13,20 @@ function getUser(request) {
   }
 }
 
+export async function GET(request) {
+  const user = getUser(request);
+  if (!user) return Response.json({ score: null });
+
+  const igdb_game_id = request.nextUrl.searchParams.get('igdb_game_id');
+  if (!igdb_game_id) return Response.json({ score: null });
+
+  const result = await pool.query(
+    'SELECT score FROM ratings WHERE user_id = $1 AND igdb_game_id = $2',
+    [user.id, parseInt(igdb_game_id, 10)]
+  );
+  return Response.json({ score: result.rows[0]?.score ?? null });
+}
+
 export async function POST(request) {
   const user = getUser(request);
   if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });

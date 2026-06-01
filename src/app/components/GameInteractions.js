@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
@@ -63,6 +64,60 @@ function IconFlag({ size = 13 }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" />
     </svg>
+  );
+}
+
+function IconDots({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" />
+    </svg>
+  );
+}
+
+function DeleteConfirmModal({ onCancel, onConfirm, deleting }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+  if (!mounted) return null;
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl border border-[#1A1A1A] bg-[#111111] p-6 flex flex-col gap-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex flex-col gap-2">
+          <h3 className="text-white font-semibold text-base">Eliminar reseña</h3>
+          <p className="text-[#9CA3AF] text-sm leading-relaxed">
+            ¿Seguro que quieres eliminar esta reseña? Esta acción no se puede deshacer.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 rounded-xl border border-[#1A1A1A] text-[#9CA3AF] text-sm py-2.5 hover:border-[#3F3F46] hover:text-white transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            className="flex-1 rounded-xl text-sm py-2.5 font-medium transition-all disabled:opacity-40"
+            style={{ backgroundColor: '#EF4444', color: '#fff' }}
+          >
+            {deleting ? 'Eliminando…' : 'Eliminar'}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -285,10 +340,10 @@ function AddToListModal({ gameId, onClose }) {
 
 // ── Rating modal ──────────────────────────────────────────────────────────────
 
-function RatingModal({ gameId, onClose, onSubmit, onAchievementsUnlocked }) {
+function RatingModal({ gameId, onClose, onSubmit, onAchievementsUnlocked, initialScore = 0, initialContent = '' }) {
   const { addToast } = useToast();
-  const [score, setScore]     = useState(0);
-  const [content, setContent] = useState('');
+  const [score, setScore]     = useState(initialScore);
+  const [content, setContent] = useState(initialContent);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
 
@@ -428,6 +483,11 @@ export default function GameInteractions({ gameId, gameData }) {
   const [favorited,     setFavorited]         = useState(false);
   const [favLoading,    setFavLoading]        = useState(false);
   const [favAnim,       setFavAnim]           = useState(false);
+  const [openKebabId,   setOpenKebabId]       = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [deletingReview,  setDeletingReview]  = useState(false);
+  const [myScore,          setMyScore]        = useState(0);
+  const [myReviewContent,  setMyReviewContent] = useState('');
 
   async function loadStats() {
     const res = await fetch(`/api/games/${gameId}/stats`);
@@ -493,8 +553,29 @@ export default function GameInteractions({ gameId, gameData }) {
       await loadReviews();
       await loadBacklog();
       await loadFavorite();
+      // Load current user's own rating (covers the case: rating exists but no review)
+      const token = localStorage.getItem('token');
+      if (token) {
+        const res = await fetch(`/api/ratings?igdb_game_id=${gameId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.score != null) setMyScore(parseFloat(data.score));
+        }
+      }
     })();
   }, [gameId]);
+
+  // Sync current user's review content (and score from joined rating) whenever reviews load
+  useEffect(() => {
+    if (!currentUsername || !reviews.length) return;
+    const mine = reviews.find((r) => r.username === currentUsername);
+    if (mine) {
+      setMyReviewContent(mine.content ?? '');
+      if (mine.score != null) setMyScore(parseFloat(mine.score));
+    }
+  }, [currentUsername, reviews]);
 
   function toggleComments(reviewId) {
     setExpandedReviews((prev) => {
@@ -503,6 +584,38 @@ export default function GameInteractions({ gameId, gameData }) {
       else next.add(reviewId);
       return next;
     });
+  }
+
+  useEffect(() => {
+    if (!openKebabId) return;
+    function close() { setOpenKebabId(null); }
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [openKebabId]);
+
+  async function handleDeleteReview(reviewId) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setDeletingReview(true);
+    try {
+      const res = await fetch(`/api/reviews/${reviewId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+        setDeleteConfirmId(null);
+        addToast('Reseña eliminada', 'success');
+        loadStats();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        addToast(data.error ?? 'Error al eliminar la reseña', 'error');
+      }
+    } catch {
+      addToast('Error de conexión', 'error');
+    } finally {
+      setDeletingReview(false);
+    }
   }
 
   async function handleReviewLike(reviewId) {
@@ -799,7 +912,7 @@ export default function GameInteractions({ gameId, gameData }) {
                       >
                         <IconShare />
                       </button>
-                      {/* Report */}
+                      {/* Report (other users' reviews) */}
                       {currentUsername && currentUsername !== r.username && (
                         <button
                           onClick={() => setReportTarget({ type: 'review', id: r.id })}
@@ -808,6 +921,34 @@ export default function GameInteractions({ gameId, gameData }) {
                         >
                           <IconFlag />
                         </button>
+                      )}
+                      {/* Kebab menu (own reviews only) */}
+                      {currentUsername === r.username && (
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenKebabId((prev) => (prev === r.id ? null : r.id));
+                            }}
+                            className="flex items-center text-[#71717A] hover:text-white transition-colors cursor-pointer p-1"
+                            title="Opciones"
+                          >
+                            <IconDots size={14} />
+                          </button>
+                          {openKebabId === r.id && (
+                            <div className="absolute right-0 bottom-7 z-20 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-1 min-w-[150px] shadow-xl">
+                              <button
+                                onClick={() => {
+                                  setOpenKebabId(null);
+                                  setDeleteConfirmId(r.id);
+                                }}
+                                className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-[#2A2A2A] transition-colors cursor-pointer rounded-xl"
+                              >
+                                Eliminar reseña
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
 
@@ -836,6 +977,8 @@ export default function GameInteractions({ gameId, gameData }) {
           onClose={() => setModalOpen(false)}
           onSubmit={handleSubmitted}
           onAchievementsUnlocked={handleAchievementsUnlocked}
+          initialScore={myScore}
+          initialContent={myReviewContent}
         />
       )}
 
@@ -853,6 +996,15 @@ export default function GameInteractions({ gameId, gameData }) {
           targetType={reportTarget.type}
           targetId={reportTarget.id}
           onClose={() => setReportTarget(null)}
+        />
+      )}
+
+      {/* ── Delete review confirmation ── */}
+      {deleteConfirmId && (
+        <DeleteConfirmModal
+          onCancel={() => setDeleteConfirmId(null)}
+          onConfirm={() => handleDeleteReview(deleteConfirmId)}
+          deleting={deletingReview}
         />
       )}
 
