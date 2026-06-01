@@ -23,13 +23,14 @@ const PLATFORM_IDS = {
   'SNES':                19,
   'NES':                 18,
   'Nintendo 3DS':        37,
+  'Nintendo DS':         20,
   'Game Boy Advance':    24,
   'Game Boy Color':      22,
   'Game Boy':            33,
   'PC':                  [6, 14, 3, 13],  // Win, Mac, Linux, DOS
   'Dreamcast':           23,
   'Saturn':              32,
-  'Mega Drive/Genesis':  29,
+  'Mega Drive':          29,
   'Android':             34,
   'iOS':                 39,
 };

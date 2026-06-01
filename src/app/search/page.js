@@ -61,9 +61,9 @@ const PLATFORMS = [
   'PS Vita', 'PSP',
   'Xbox Series X|S', 'Xbox One', 'Xbox 360', 'Xbox',
   'Nintendo Switch', 'Wii U', 'Wii', 'GameCube', 'Nintendo 64', 'SNES', 'NES',
-  'Nintendo 3DS', 'Game Boy Advance', 'Game Boy Color', 'Game Boy',
+  'Nintendo 3DS', 'Nintendo DS', 'Game Boy Advance', 'Game Boy Color', 'Game Boy',
   'PC',
-  'Dreamcast', 'Saturn', 'Mega Drive/Genesis',
+  'Dreamcast', 'Saturn', 'Mega Drive',
   'Android', 'iOS',
 ];
 
