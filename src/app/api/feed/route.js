@@ -183,10 +183,11 @@ export async function GET(request) {
     });
 
     // ── Trending: top 5 most-rated games this week ────────────────────────────
+    // Uses `ratings` (canonical, 1 row per user/game) so re-ratings don't inflate counts.
     const trendingRes = await pool.query(
       `SELECT igdb_game_id, COUNT(*) AS cnt
-       FROM activity
-       WHERE type = 'rating' AND created_at > NOW() - INTERVAL '7 days'
+       FROM ratings
+       WHERE updated_at > NOW() - INTERVAL '7 days'
        GROUP BY igdb_game_id
        ORDER BY cnt DESC
        LIMIT 5`

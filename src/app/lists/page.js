@@ -29,11 +29,6 @@ const TAB_SLUGS = {
 };
 const SLUG_TO_KEY = Object.fromEntries(Object.entries(TAB_SLUGS).map(([k, v]) => [v, k]));
 
-const CATEGORIES = [
-  'RPG', 'Acción/Aventura', 'Terror', 'Indie',
-  'Multijugador', 'Soulslike', 'Plataformas', 'Estrategia',
-];
-
 // ── Cover collage ─────────────────────────────────────────────────────────────
 
 function CoverCollage({ covers }) {
@@ -466,20 +461,6 @@ export default function ListsPage() {
           </>
         )}
 
-        {/* Popular categories */}
-        <div className="mt-16 pt-12 border-t border-[#1A1A1A]">
-          <h2 className={`${anton.className} text-white text-2xl mb-6`}>Categorías Populares</h2>
-          <div className="flex flex-wrap gap-3">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                className="px-5 py-2.5 rounded-full border border-[#1A1A1A] text-[#71717A] text-sm hover:text-white hover:border-[#A855F7] transition-colors cursor-pointer"
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {createModal && (
