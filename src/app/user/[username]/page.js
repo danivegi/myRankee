@@ -11,6 +11,7 @@ import ReviewCommentsSection from '@/app/components/ReviewCommentsSection';
 import ShareModal from '@/app/components/ShareModal';
 import ReportModal from '@/app/components/ReportModal';
 import { getAchievementImage } from '@/lib/achievement-images';
+import { parseDbDate } from '@/lib/dateUtils';
 import { useToast } from '@/app/components/ToastProvider';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -100,7 +101,7 @@ function StarRating({ value, size = 14 }) {
 
 function formatDate(iso) {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  return parseDbDate(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 const TABS = ['Juegos', 'Reseñas', 'Listas', 'Backlog', 'Favoritos', 'Diario', 'Logros', 'Estadísticas'];
@@ -389,7 +390,7 @@ function BacklogListRow({ item, isOwner, onStatusChange, onRemove }) {
       </span>
 
       <span className="text-[#3F3F46] text-[11px] font-mono flex-shrink-0 hidden sm:block">
-        {new Date(item.added_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+        {parseDbDate(item.added_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
       </span>
 
       {isOwner && (
@@ -457,8 +458,8 @@ function BacklogTab({ username, isOwner, token }) {
 
   const sorted = [...filtered].sort((a, b) => {
     switch (sort) {
-      case 'recent': return new Date(b.added_at) - new Date(a.added_at);
-      case 'old':    return new Date(a.added_at) - new Date(b.added_at);
+      case 'recent': return parseDbDate(b.added_at) - parseDbDate(a.added_at);
+      case 'old':    return parseDbDate(a.added_at) - parseDbDate(b.added_at);
       case 'az':     return (a.game.name ?? '').localeCompare(b.game.name ?? '', 'es');
       case 'za':     return (b.game.name ?? '').localeCompare(a.game.name ?? '', 'es');
       case 'year':   return (b.game.year ?? 0) - (a.game.year ?? 0);
@@ -794,7 +795,7 @@ function AchievementCard({ ach, isOwner }) {
       <div className="mt-auto">
         {unlocked ? (
           <p className="text-center text-[10px] font-mono" style={{ color }}>
-            Desbloqueado el {new Date(ach.unlocked_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+            Desbloqueado el {parseDbDate(ach.unlocked_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
           </p>
         ) : isOwner && ach.progress !== null ? (
           <div className="flex flex-col gap-1">
@@ -1502,7 +1503,7 @@ function ReviewCard({ review, token, viewerUsername, reviewAuthorUsername }) {
         <Link href={`/game/${review.igdb_game_id}`} className="flex-shrink-0">
           <div className="relative w-[90px] h-[120px] rounded-lg overflow-hidden bg-[#141414]">
             {review.cover
-              ? <Image src={review.cover} alt={review.name ?? ''} fill className="object-cover" />
+              ? <Image src={review.cover} alt={review.name ?? ''} fill sizes="90px" className="object-cover" />
               : <div className="w-full h-full bg-[#1A1A1A]" />
             }
           </div>
@@ -1625,7 +1626,7 @@ function GameCard({ rating }) {
     <Link href={`/game/${rating.igdb_game_id}`} className="flex flex-col gap-2 group">
       <div className="relative aspect-[3/4] w-full rounded-lg overflow-hidden bg-[#141414]">
         {rating.cover
-          ? <Image src={rating.cover} alt={rating.name ?? ''} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+          ? <Image src={rating.cover} alt={rating.name ?? ''} fill sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 17vw" className="object-cover group-hover:scale-105 transition-transform duration-300" />
           : <div className="w-full h-full bg-[#1A1A1A]" />
         }
       </div>
@@ -1747,7 +1748,7 @@ function FollowModal({ title, users, loading, token, viewerUsername, onClose }) 
 // ── Diary ─────────────────────────────────────────────────────────────────────
 
 function DiaryEntryRow({ entry }) {
-  const date = new Date(entry.created_at);
+  const date = parseDbDate(entry.created_at);
   const day  = date.getDate();
   const formattedDate = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -1856,7 +1857,7 @@ export default function UserProfilePage({ params }) {
     const arr = [...ratings];
     switch (ratingsSort) {
       case 'oldest':
-        return arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        return arr.sort((a, b) => parseDbDate(a.created_at) - parseDbDate(b.created_at));
       case 'score_desc':
         return arr.sort((a, b) => parseFloat(b.score ?? 0) - parseFloat(a.score ?? 0));
       case 'score_asc':
@@ -1885,7 +1886,7 @@ export default function UserProfilePage({ params }) {
     const arr = [...reviews];
     switch (reviewsSort) {
       case 'oldest':
-        return arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        return arr.sort((a, b) => parseDbDate(a.created_at) - parseDbDate(b.created_at));
       case 'score_desc':
         return arr.sort((a, b) => parseFloat(b.score ?? 0) - parseFloat(a.score ?? 0));
       case 'score_asc':
@@ -1910,7 +1911,7 @@ export default function UserProfilePage({ params }) {
     const groups = [];
     let current = null;
     for (const entry of ratings) {
-      const d   = new Date(entry.created_at);
+      const d   = parseDbDate(entry.created_at);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       if (!current || current.key !== key) {
         current = { key, label: `${MESES[d.getMonth()]} ${d.getFullYear()}`, entries: [] };
@@ -2131,7 +2132,7 @@ export default function UserProfilePage({ params }) {
 
   const recentAchievements = achievements
     .filter((a) => a.unlocked)
-    .sort((a, b) => new Date(b.unlocked_at) - new Date(a.unlocked_at))
+    .sort((a, b) => parseDbDate(b.unlocked_at) - parseDbDate(a.unlocked_at))
     .slice(0, 3);
 
   return (
@@ -2144,7 +2145,7 @@ export default function UserProfilePage({ params }) {
 
         {/* Banner */}
         <div className="relative h-[200px] w-full overflow-hidden">
-          <Image src="/images/1.png" alt="Profile banner" fill className="object-cover" priority />
+          <Image src="/images/1.png" alt="Profile banner" fill sizes="100vw" className="object-cover" priority />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 0%, #0A0A0A 85%)' }} />
         </div>
 

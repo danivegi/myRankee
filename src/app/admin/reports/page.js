@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { parseDbDate } from '@/lib/dateUtils';
 
 const STATUS_TABS = [
   { value: 'pending',   label: 'Pendientes' },
@@ -32,7 +33,7 @@ const REASON_LABELS = {
 };
 
 function formatDate(ts) {
-  return new Date(ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+  return parseDbDate(ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export default function AdminReportsPage() {

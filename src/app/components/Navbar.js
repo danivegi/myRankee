@@ -6,6 +6,7 @@ import { Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
 import Avatar from '@/app/components/Avatar';
+import { parseDbDate } from '@/lib/dateUtils';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
@@ -488,7 +489,7 @@ export default function Navbar() {
                                 </p>
                               )}
                               <p className="text-[#71717A] text-xs mt-0.5">
-                                {new Date(n.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                                {parseDbDate(n.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
                               </p>
                             </div>
                             {!n.read && <span className="w-2 h-2 rounded-full bg-[#A855F7] flex-shrink-0 mt-2" />}

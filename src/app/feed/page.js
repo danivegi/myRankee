@@ -141,7 +141,7 @@ function FeedCard({ item, token, currentUser }) {
       <Link href={`/game/${item.game.id}`} className="flex gap-4 bg-[#111111] rounded-xl p-4 border border-[#1A1A1A] hover:border-[#3F3F46] transition-colors">
         <div className="relative w-16 h-[86px] rounded-lg overflow-hidden flex-shrink-0 bg-[#1A1A1A]">
           {item.game.cover && (
-            <Image src={item.game.cover} alt={item.game.name} fill className="object-cover" />
+            <Image src={item.game.cover} alt={item.game.name} fill sizes="64px" className="object-cover" />
           )}
         </div>
         <div className="flex flex-col gap-2 justify-center min-w-0">

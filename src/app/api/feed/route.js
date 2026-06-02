@@ -3,11 +3,12 @@ import pool from '@/lib/db';
 import { queryIGDB, coverUrl } from '@/lib/igdb';
 import { ensureFollowsTable } from '@/lib/init-follows';
 import { ensureCommentsTables } from '@/lib/comments';
+import { parseDbDate } from '@/lib/dateUtils';
 
 // ── Spanish relative time ─────────────────────────────────────────────────────
 
 function timeAgo(date) {
-  const diff = Date.now() - new Date(date).getTime();
+  const diff = Date.now() - parseDbDate(date).getTime();
   const mins  = Math.floor(diff / 60_000);
   if (mins < 2)  return 'ahora mismo';
   if (mins < 60) return `hace ${mins} min`;
@@ -110,7 +111,7 @@ export async function GET(request) {
       } else {
         const m = mergeMap.get(key);
         m.types.add(row.type);
-        if (new Date(row.created_at) > new Date(m.created_at)) m.created_at = row.created_at;
+        if (parseDbDate(row.created_at) > parseDbDate(m.created_at)) m.created_at = row.created_at;
         if (row.type === 'rating') m.score = row.metadata?.score;
         if (row.type === 'review') {
           m.content        = row.metadata?.content;
@@ -124,8 +125,8 @@ export async function GET(request) {
 
     const mergedRows = [...mergeMap.values()]
       .sort(tab === 'popular'
-        ? (a, b) => b.likes_count - a.likes_count || new Date(b.created_at) - new Date(a.created_at)
-        : (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        ? (a, b) => b.likes_count - a.likes_count || parseDbDate(b.created_at) - parseDbDate(a.created_at)
+        : (a, b) => parseDbDate(b.created_at) - parseDbDate(a.created_at)
       )
       .slice(0, 20);
 

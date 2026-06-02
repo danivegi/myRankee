@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Avatar from '@/app/components/Avatar';
 import ReportModal from './ReportModal';
+import { parseDbDate } from '@/lib/dateUtils';
 
 function IconFlag({ size = 11 }) {
   return (
@@ -15,7 +16,8 @@ function IconFlag({ size = 11 }) {
 
 
 function timeAgo(date) {
-  const diff = Date.now() - new Date(date).getTime();
+  const parsed = parseDbDate(date);
+  const diff = Date.now() - parsed.getTime();
   const mins = Math.floor(diff / 60_000);
   if (mins < 2) return 'ahora';
   if (mins < 60) return `${mins}m`;
@@ -23,7 +25,7 @@ function timeAgo(date) {
   if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d`;
-  return new Date(date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  return parsed.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
 }
 
 function IconTrash({ size = 11 }) {

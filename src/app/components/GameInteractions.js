@@ -7,6 +7,7 @@ import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from './ToastProvider';
+import { parseDbDate } from '@/lib/dateUtils';
 import ReviewCommentsSection from './ReviewCommentsSection';
 import Avatar from './Avatar';
 import ShareModal from './ShareModal';
@@ -866,7 +867,7 @@ export default function GameInteractions({ gameId, gameData }) {
                         {r.score != null && <StarRating value={parseFloat(r.score)} size={12} />}
                       </div>
                       <span className="text-[#71717A] text-[11px] font-mono ml-auto">
-                        {new Date(r.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {parseDbDate(r.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
                     </div>
                     <p className="text-[#71717A] text-sm leading-[1.5]">{r.content}</p>

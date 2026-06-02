@@ -1,6 +1,7 @@
 import pool from '@/lib/db';
 import { queryIGDB } from '@/lib/igdb';
 import { translateGenre, translatePlatform } from '@/lib/translations';
+import { parseDbDate } from '@/lib/dateUtils';
 
 export async function GET(request, { params }) {
   const { username } = await params;
@@ -38,7 +39,7 @@ export async function GET(request, { params }) {
     const year = currentYear - 4 + i;
     return {
       year: String(year),
-      count: ratings.filter((r) => new Date(r.created_at).getFullYear() === year).length,
+      count: ratings.filter((r) => parseDbDate(r.created_at).getFullYear() === year).length,
     };
   });
 
