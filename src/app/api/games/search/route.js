@@ -159,15 +159,19 @@ export async function GET(request) {
     });
   }
 
-  // ── CASE B: text search ───────────────────────────────────────────────────
-  // IGDB count endpoint doesn't support 'search', so total is unknown for
-  // text queries — the frontend falls back to prev/next pagination.
+  // ── CASE B: text search (name substring filter) ──────────────────────────
+  // Now uses `where name ~ *"..."*` — a plain where clause that the
+  // /games/count endpoint supports, so we can get the exact total.
   if (hasText) {
     const safeQ    = q.replace(/[*"\\]/g, '');  // strip wildcards and quotes to keep query valid
     const whereStr = [`name ~ *"${safeQ}"*`, ...baseClauses].join(' & ');
-    const igdbQuery = `${FIELDS}; where ${whereStr}; sort ${igdbSort}; limit ${PAGE_SIZE}; offset ${offset};`;
-    const results   = await queryIGDB('games', igdbQuery);
-    let games = (results ?? []).map(mapGame);
+
+    const [resultsRes, countRes] = await Promise.allSettled([
+      queryIGDB('games',       `${FIELDS}; where ${whereStr}; sort ${igdbSort}; limit ${PAGE_SIZE}; offset ${offset};`),
+      queryIGDB('games/count', `where ${whereStr};`),
+    ]);
+
+    let games = (resultsRes.status === 'fulfilled' ? resultsRes.value ?? [] : []).map(mapGame);
 
     if (hasBacklogFilter) {
       const userId = getUserId();
@@ -182,7 +186,11 @@ export async function GET(request) {
       }
     }
 
-    return Response.json({ games, total: null, page });
+    return Response.json({
+      games,
+      total: countRes.status === 'fulfilled' ? (countRes.value?.count ?? null) : null,
+      page,
+    });
   }
 
   // ── CASE C: filter-only, no text ──────────────────────────────────────────
