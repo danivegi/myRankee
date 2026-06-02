@@ -49,7 +49,15 @@ const GENRE_CONDITIONS = {
 
 const RATING_THRESHOLD = { '5': 90, '4': 80, '3': 60, '2': 40, '1': 20 };
 
-const FIELDS = 'fields id,name,cover.image_id,rating,genres.name,platforms.name,first_release_date';
+const FIELDS = 'fields id,name,cover.image_id,rating,total_rating,total_rating_count,genres.name,platforms.name,first_release_date';
+
+// Maps the frontend sort option to an IGDB sort clause used for name~ queries.
+const TEXT_SORT = {
+  relevancia: 'total_rating_count desc',
+  puntuacion: 'total_rating desc',
+  recientes:  'first_release_date desc',
+  nombre:     'name asc',
+};
 
 function mapGame(g) {
   return {
@@ -67,8 +75,10 @@ export async function GET(request) {
   const q   = searchParams.get('q')?.trim() ?? '';
   const now = Math.floor(Date.now() / 1000);
 
-  const page   = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
-  const offset = (page - 1) * PAGE_SIZE;
+  const page    = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
+  const offset  = (page - 1) * PAGE_SIZE;
+  const sortKey = (searchParams.get('sort_by') ?? 'relevancia').toLowerCase();
+  const igdbSort = TEXT_SORT[sortKey] ?? TEXT_SORT.relevancia;
 
   // ── Parse filter params ────────────────────────────────────────────────────
   const selectedPlatforms = searchParams.get('platforms')?.split(',').filter(Boolean) ?? [];
@@ -153,10 +163,11 @@ export async function GET(request) {
   // IGDB count endpoint doesn't support 'search', so total is unknown for
   // text queries — the frontend falls back to prev/next pagination.
   if (hasText) {
-    const whereStr  = baseClauses.join(' & ');
-    const igdbQuery = `${FIELDS}; search "${q.replace(/"/g, '')}"; where ${whereStr}; limit ${PAGE_SIZE}; offset ${offset};`;
+    const safeQ    = q.replace(/[*"\\]/g, '');  // strip wildcards and quotes to keep query valid
+    const whereStr = [`name ~ *"${safeQ}"*`, ...baseClauses].join(' & ');
+    const igdbQuery = `${FIELDS}; where ${whereStr}; sort ${igdbSort}; limit ${PAGE_SIZE}; offset ${offset};`;
     const results   = await queryIGDB('games', igdbQuery);
-    let games = (results ?? []).sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)).map(mapGame);
+    let games = (results ?? []).map(mapGame);
 
     if (hasBacklogFilter) {
       const userId = getUserId();

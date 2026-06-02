@@ -775,7 +775,7 @@ export default function SearchPage() {
   useEffect(() => {
     if (!initialized) return;
     setPage(1);
-  }, [initialized, query, platforms, activeGenres, activeRating, yearFrom, yearTo, backlogFilter, selectedCompanies]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [initialized, query, platforms, activeGenres, activeRating, yearFrom, yearTo, backlogFilter, selectedCompanies, activeSort]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch game results
   useEffect(() => {
@@ -799,6 +799,7 @@ export default function SearchPage() {
         if (yearTo)                       params.set('year_to', yearTo);
         if (backlogFilter.length > 0)     params.set('backlog_status', backlogFilter.join(','));
         if (selectedCompanies.length > 0) params.set('company_ids', selectedCompanies.map((c) => c.id).join(','));
+        params.set('sort_by', activeSort.toLowerCase());
 
         const headers = {};
         if (backlogFilter.length > 0 && token) headers.Authorization = `Bearer ${token}`;
@@ -822,7 +823,7 @@ export default function SearchPage() {
       }
     }, 400);
     return () => clearTimeout(timer);
-  }, [query, platforms, activeGenres, activeRating, yearFrom, yearTo, backlogFilter, selectedCompanies, token, page]);
+  }, [query, platforms, activeGenres, activeRating, yearFrom, yearTo, backlogFilter, selectedCompanies, token, page, activeSort]);
 
   // Fetch user results
   useEffect(() => {
