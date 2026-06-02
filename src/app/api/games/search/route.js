@@ -3,6 +3,8 @@ import { translateGenre, translatePlatform } from '@/lib/translations';
 import pool from '@/lib/db';
 import jwt from 'jsonwebtoken';
 
+const PAGE_SIZE = 25;
+
 const PLATFORM_IDS = {
   'PlayStation 5':      167,
   'PlayStation 4':       48,
@@ -35,7 +37,6 @@ const PLATFORM_IDS = {
   'iOS':                 39,
 };
 
-// Maps Spanish genre pill labels to IGDB Apicalypse where conditions
 const GENRE_CONDITIONS = {
   'RPG':        'genres = (12)',
   'Acción':     '(genres = (4) | genres = (5) | genres = (25))',
@@ -46,7 +47,6 @@ const GENRE_CONDITIONS = {
   'Terror':     'themes = (19)',
 };
 
-// IGDB rating (0–100) threshold per star level; formula: stars = rating / 20
 const RATING_THRESHOLD = { '5': 90, '4': 80, '3': 60, '2': 40, '1': 20 };
 
 const FIELDS = 'fields id,name,cover.image_id,rating,genres.name,platforms.name,first_release_date';
@@ -64,8 +64,11 @@ function mapGame(g) {
 
 export async function GET(request) {
   const { searchParams } = request.nextUrl;
-  const q = searchParams.get('q')?.trim() ?? '';
+  const q   = searchParams.get('q')?.trim() ?? '';
   const now = Math.floor(Date.now() / 1000);
+
+  const page   = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
+  const offset = (page - 1) * PAGE_SIZE;
 
   // ── Parse filter params ────────────────────────────────────────────────────
   const selectedPlatforms = searchParams.get('platforms')?.split(',').filter(Boolean) ?? [];
@@ -74,26 +77,26 @@ export async function GET(request) {
     return Array.isArray(v) ? v : v ? [v] : [];
   });
 
-  const selectedGenres = searchParams.get('genres')?.split(',').filter(Boolean) ?? [];
-  const genreConditions = selectedGenres.map((g) => GENRE_CONDITIONS[g]).filter(Boolean);
+  const selectedGenres    = searchParams.get('genres')?.split(',').filter(Boolean) ?? [];
+  const genreConditions   = selectedGenres.map((g) => GENRE_CONDITIONS[g]).filter(Boolean);
 
-  const yearFrom = parseInt(searchParams.get('year_from'));
-  const yearTo   = parseInt(searchParams.get('year_to'));
-
-  const minRating = searchParams.get('min_rating');
+  const yearFrom      = parseInt(searchParams.get('year_from'));
+  const yearTo        = parseInt(searchParams.get('year_to'));
+  const minRating     = searchParams.get('min_rating');
   const ratingThreshold = minRating ? RATING_THRESHOLD[minRating] : null;
+  const companyIds    = searchParams.get('company_ids')?.split(',').map(Number).filter(Boolean) ?? [];
 
-  const companyIds = searchParams.get('company_ids')?.split(',').map(Number).filter(Boolean) ?? [];
-
-  const backlogStatuses = searchParams.get('backlog_status')?.split(',').filter(Boolean) ?? [];
+  const backlogStatuses  = searchParams.get('backlog_status')?.split(',').filter(Boolean) ?? [];
   const hasBacklogFilter = backlogStatuses.length > 0;
   const hasText          = q.length > 0;
   const hasIGDBFilters   = platformIds.length > 0 || genreConditions.length > 0 ||
     !isNaN(yearFrom) || !isNaN(yearTo) || !!ratingThreshold || companyIds.length > 0;
 
-  if (!hasText && !hasIGDBFilters && !hasBacklogFilter) return Response.json([]);
+  if (!hasText && !hasIGDBFilters && !hasBacklogFilter) {
+    return Response.json({ games: [], total: null, page });
+  }
 
-  // ── Build shared IGDB where clauses (base + optional filters) ─────────────
+  // ── Build shared IGDB where clauses ───────────────────────────────────────
   const baseClauses = [
     'first_release_date != null',
     `first_release_date < ${now}`,
@@ -107,21 +110,13 @@ export async function GET(request) {
   if (companyIds.length === 1)    baseClauses.push(`involved_companies.company = (${companyIds[0]})`);
   else if (companyIds.length > 1) baseClauses.push(`(${companyIds.map((id) => `involved_companies.company = (${id})`).join(' | ')})`);
 
-  // ── AUTH helper ───────────────────────────────────────────────────────────
   function getUserId() {
     const tok = request.headers.get('Authorization')?.replace('Bearer ', '');
     if (!tok) return null;
     try { return jwt.verify(tok, process.env.JWT_SECRET).id; } catch { return null; }
   }
 
-  // ── CASE A: backlog filter + NO search text → DB-first approach ───────────
-  //
-  // Problem with the old approach: without a text query, IGDB returns 20
-  // arbitrary top-rated games, and then backlog filtering almost always yields
-  // 0 results because the user's games are unlikely to be in that set.
-  //
-  // Fix: query the backlog table first to get the exact game IDs, then ask
-  // IGDB for those specific games with other active filters applied on top.
+  // ── CASE A: backlog filter + NO search text → DB-first ────────────────────
   if (hasBacklogFilter && !hasText) {
     const userId = getUserId();
     if (!userId) {
@@ -137,42 +132,58 @@ export async function GET(request) {
       [userId, ...backlogStatuses]
     );
 
-    if (dbRes.rows.length === 0) return Response.json([]);
+    if (dbRes.rows.length === 0) return Response.json({ games: [], total: 0, page });
 
-    // Slice to 200 to stay within safe IGDB where-clause limits
-    const backlogIds = dbRes.rows.map((r) => r.igdb_game_id).slice(0, 200);
-    const clauses = [...baseClauses, `id = (${backlogIds.join(',')})`];
+    const backlogIds = dbRes.rows.map((r) => r.igdb_game_id).slice(0, 500);
+    const whereStr   = [...baseClauses, `id = (${backlogIds.join(',')})`].join(' & ');
 
-    const results = await queryIGDB(
-      'games',
-      `${FIELDS}; where ${clauses.join(' & ')}; sort rating desc; limit 200;`
-    );
+    const [resultsRes, countRes] = await Promise.allSettled([
+      queryIGDB('games', `${FIELDS}; where ${whereStr}; sort rating desc; limit ${PAGE_SIZE}; offset ${offset};`),
+      queryIGDB('games/count', `where ${whereStr};`),
+    ]);
 
-    return Response.json((results ?? []).map(mapGame));
+    return Response.json({
+      games: (resultsRes.status === 'fulfilled' ? resultsRes.value ?? [] : []).map(mapGame),
+      total: countRes.status  === 'fulfilled'  ? (countRes.value?.count ?? null) : null,
+      page,
+    });
   }
 
-  // ── CASE B: text search (with optional backlog post-filter) ───────────────
-  const igdbQuery = hasText
-    ? `${FIELDS}; search "${q.replace(/"/g, '')}"; where ${baseClauses.join(' & ')}; limit 20;`
-    : `${FIELDS}; where ${baseClauses.join(' & ')}; sort rating desc; limit 20;`;
+  // ── CASE B: text search ───────────────────────────────────────────────────
+  // IGDB count endpoint doesn't support 'search', so total is unknown for
+  // text queries — the frontend falls back to prev/next pagination.
+  if (hasText) {
+    const whereStr  = baseClauses.join(' & ');
+    const igdbQuery = `${FIELDS}; search "${q.replace(/"/g, '')}"; where ${whereStr}; limit ${PAGE_SIZE}; offset ${offset};`;
+    const results   = await queryIGDB('games', igdbQuery);
+    let games = (results ?? []).sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)).map(mapGame);
 
-  const results = await queryIGDB('games', igdbQuery);
-  let games = (results ?? []).sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)).map(mapGame);
-
-  // When backlog filter is active WITH text: post-filter the IGDB results
-  // (text search caps results at 20, so post-filtering is safe and correct)
-  if (hasBacklogFilter) {
-    const userId = getUserId();
-    if (userId) {
-      const placeholders = backlogStatuses.map((_, i) => `$${i + 2}`).join(',');
-      const res = await pool.query(
-        `SELECT igdb_game_id FROM backlog WHERE user_id = $1 AND status IN (${placeholders})`,
-        [userId, ...backlogStatuses]
-      );
-      const backlogGameIds = new Set(res.rows.map((r) => r.igdb_game_id));
-      games = games.filter((g) => backlogGameIds.has(g.id));
+    if (hasBacklogFilter) {
+      const userId = getUserId();
+      if (userId) {
+        const placeholders = backlogStatuses.map((_, i) => `$${i + 2}`).join(',');
+        const res = await pool.query(
+          `SELECT igdb_game_id FROM backlog WHERE user_id = $1 AND status IN (${placeholders})`,
+          [userId, ...backlogStatuses]
+        );
+        const backlogGameIds = new Set(res.rows.map((r) => r.igdb_game_id));
+        games = games.filter((g) => backlogGameIds.has(g.id));
+      }
     }
+
+    return Response.json({ games, total: null, page });
   }
 
-  return Response.json(games);
+  // ── CASE C: filter-only, no text ──────────────────────────────────────────
+  const whereStr = baseClauses.join(' & ');
+  const [resultsRes, countRes] = await Promise.allSettled([
+    queryIGDB('games', `${FIELDS}; where ${whereStr}; sort rating desc; limit ${PAGE_SIZE}; offset ${offset};`),
+    queryIGDB('games/count', `where ${whereStr};`),
+  ]);
+
+  return Response.json({
+    games: (resultsRes.status === 'fulfilled' ? resultsRes.value ?? [] : []).map(mapGame),
+    total: countRes.status  === 'fulfilled'  ? (countRes.value?.count ?? null) : null,
+    page,
+  });
 }

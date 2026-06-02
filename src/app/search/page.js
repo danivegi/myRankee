@@ -339,7 +339,7 @@ function GameCard({ game, index }) {
       href={`/game/${game.id}`}
       className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-[#111111] transition-colors group cursor-pointer"
     >
-      <span className="text-[#71717A] font-mono text-[13px] w-5 text-right flex-shrink-0">{index + 1}</span>
+      <span className="text-[#71717A] font-mono text-[13px] w-14 text-right flex-shrink-0">{index + 1}</span>
       <div className="relative w-10 h-14 rounded-md overflow-hidden bg-[#1A1A1A] flex-shrink-0">
         {game.cover
           ? <Image src={game.cover} alt={game.name} fill className="object-cover" sizes="40px" />
@@ -362,6 +362,63 @@ function GameCard({ game, index }) {
         </span>
       )}
     </Link>
+  );
+}
+
+function buildPageRange(current, total) {
+  const delta = 2;
+  const rangeSet = new Set([1, total]);
+  for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) rangeSet.add(i);
+  const sorted = [...rangeSet].sort((a, b) => a - b);
+  const result = [];
+  let prev = 0;
+  for (const p of sorted) {
+    if (p - prev > 1) result.push('…');
+    result.push(p);
+    prev = p;
+  }
+  return result;
+}
+
+function Pagination({ page, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null;
+  const pages = buildPageRange(page, totalPages);
+  const btnBase = 'min-w-[36px] h-9 rounded-lg border text-sm font-mono transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed';
+  return (
+    <div className="flex items-center justify-center gap-1 pt-8 pb-4 flex-wrap">
+      <button
+        onClick={() => onPageChange(page - 1)}
+        disabled={page <= 1}
+        className={`${btnBase} border-[#1A1A1A] text-[#71717A] hover:text-white hover:border-[#3F3F46] px-3`}
+      >
+        ← Ant.
+      </button>
+      {pages.map((p, i) =>
+        p === '…' ? (
+          <span key={`dots-${i}`} className="text-[#3F3F46] text-sm px-1 select-none">…</span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onPageChange(p)}
+            className={[
+              btnBase,
+              p === page
+                ? 'bg-[#A855F7] text-[#0A0A0A] border-[#A855F7]'
+                : 'border-[#1A1A1A] text-[#71717A] hover:text-white hover:border-[#3F3F46]',
+            ].join(' ')}
+          >
+            {p}
+          </button>
+        )
+      )}
+      <button
+        onClick={() => onPageChange(page + 1)}
+        disabled={page >= totalPages}
+        className={`${btnBase} border-[#1A1A1A] text-[#71717A] hover:text-white hover:border-[#3F3F46] px-3`}
+      >
+        Sig. →
+      </button>
+    </div>
   );
 }
 
@@ -637,6 +694,9 @@ export default function SearchPage() {
   const [initialized,      setInitialized]      = useState(false);
   const [filterResetKey,   setFilterResetKey]   = useState(0);
   const [searchError,      setSearchError]      = useState(null); // e.g. 'auth_required'
+  const [page,             setPage]             = useState(1);
+  const [totalCount,       setTotalCount]       = useState(null);
+  const resultsTopRef = useRef(null);
 
   const activeFilterCount =
     platforms.length +
@@ -686,6 +746,9 @@ export default function SearchPage() {
       if (parsed.length > 0) setSelectedCompanies(parsed);
     }
 
+    const p = parseInt(params.get('page') ?? '1', 10);
+    if (!isNaN(p) && p > 1) setPage(p);
+
     setInitialized(true);
   }, []);
 
@@ -703,9 +766,16 @@ export default function SearchPage() {
     if (backlogFilter.length > 0) params.set('backlog', backlogFilter.join(','));
     if (selectedCompanies.length > 0)
       params.set('companies', selectedCompanies.map((c) => `${c.id}~${c.name}`).join(','));
+    if (page > 1) params.set('page', String(page));
     const str = params.toString();
     window.history.replaceState(null, '', str ? `/search?${str}` : '/search');
-  }, [initialized, query, activeTab, activeGenres, platforms, activeRating, yearFrom, yearTo, backlogFilter, selectedCompanies]);
+  }, [initialized, query, activeTab, activeGenres, platforms, activeRating, yearFrom, yearTo, backlogFilter, selectedCompanies, page]);
+
+  // Reset to page 1 whenever any filter (not page itself) changes
+  useEffect(() => {
+    if (!initialized) return;
+    setPage(1);
+  }, [initialized, query, platforms, activeGenres, activeRating, yearFrom, yearTo, backlogFilter, selectedCompanies]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch game results
   useEffect(() => {
@@ -733,14 +803,17 @@ export default function SearchPage() {
         const headers = {};
         if (backlogFilter.length > 0 && token) headers.Authorization = `Bearer ${token}`;
 
+        params.set('page', String(page));
         const res  = await fetch(`/api/games/search?${params}`, { headers });
         const data = await res.json();
 
         if (!res.ok) {
           setSearchError(data?.error ?? 'error');
           setGameResults([]);
+          setTotalCount(null);
         } else {
-          setGameResults(Array.isArray(data) ? data : []);
+          setGameResults(data.games ?? []);
+          setTotalCount(data.total ?? null);
         }
       } catch {
         setGameResults([]);
@@ -749,7 +822,7 @@ export default function SearchPage() {
       }
     }, 400);
     return () => clearTimeout(timer);
-  }, [query, platforms, activeGenres, activeRating, yearFrom, yearTo, backlogFilter, selectedCompanies, token]);
+  }, [query, platforms, activeGenres, activeRating, yearFrom, yearTo, backlogFilter, selectedCompanies, token, page]);
 
   // Fetch user results
   useEffect(() => {
@@ -783,6 +856,11 @@ export default function SearchPage() {
     setActiveTab(tab);
   }
 
+  function handlePageChange(newPage) {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   function togglePlatform(p) {
     if (p === null) { setPlatforms([]); return; }
     setPlatforms((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]);
@@ -806,6 +884,7 @@ export default function SearchPage() {
     setSelectedCompanies([]);
     setFilterResetKey((k) => k + 1);
     setSearchError(null);
+    setPage(1);
   }
 
   const loading = activeTab === 'Juegos' ? gamesLoading : usersLoading;
@@ -850,7 +929,9 @@ export default function SearchPage() {
               >
                 {tab}
                 {tab === 'Juegos' && (query.trim() || activeFilterCount > 0) && !gamesLoading && (
-                  <span className="ml-1.5 text-[11px] font-mono text-[#71717A]">({gameResults.length})</span>
+                  <span className="ml-1.5 text-[11px] font-mono text-[#71717A]">
+                    ({totalCount != null ? totalCount : gameResults.length}{totalCount == null && gameResults.length === 25 ? '+' : ''})
+                  </span>
                 )}
                 {tab === 'Usuarios' && query.trim() && !usersLoading && (
                   <span className="ml-1.5 text-[11px] font-mono text-[#71717A]">({userResults.length})</span>
@@ -882,7 +963,9 @@ export default function SearchPage() {
         {activeTab === 'Juegos' && (query.trim() || activeFilterCount > 0) && !gamesLoading && gameResults.length > 0 && (
           <p className="text-sm">
             <span className="text-[#A3A3A3]">Se encontraron </span>
-            <span className="text-white font-semibold">{gameResults.length} juegos</span>
+            <span className="text-white font-semibold">
+              {totalCount != null ? totalCount : gameResults.length}{totalCount == null && gameResults.length === 25 ? '+' : ''} juegos
+            </span>
             {query.trim() ? (
               <>
                 <span className="text-[#A3A3A3]"> para </span>
@@ -1124,13 +1207,45 @@ export default function SearchPage() {
                 </div>
               )}
               {!gamesLoading && sortedGameResults.length > 0 && (
-                <div className={view === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4' : 'flex flex-col'}>
-                  {sortedGameResults.map((game, i) => (
-                    view === 'grid'
-                      ? <GridCard key={game.id} game={game} />
-                      : <GameCard key={game.id} game={game} index={i} />
-                  ))}
-                </div>
+                <>
+                  <div className={view === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4' : 'flex flex-col'}>
+                    {sortedGameResults.map((game, i) => (
+                      view === 'grid'
+                        ? <GridCard key={game.id} game={game} />
+                        : <GameCard key={game.id} game={game} index={(page - 1) * 25 + i} />
+                    ))}
+                  </div>
+
+                  {/* Numbered pagination (filter searches with known total) */}
+                  {totalCount != null && (
+                    <Pagination
+                      page={page}
+                      totalPages={Math.ceil(totalCount / 25)}
+                      onPageChange={handlePageChange}
+                    />
+                  )}
+
+                  {/* Simplified prev/next (text searches, total unknown) */}
+                  {totalCount == null && (page > 1 || sortedGameResults.length === 25) && (
+                    <div className="flex items-center justify-center gap-3 pt-8 pb-4">
+                      <button
+                        onClick={() => handlePageChange(page - 1)}
+                        disabled={page <= 1}
+                        className="px-4 py-2 rounded-lg border border-[#1A1A1A] text-[#71717A] text-sm hover:text-white hover:border-[#3F3F46] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        ← Anterior
+                      </button>
+                      <span className="text-[#71717A] text-sm font-mono">Página {page}</span>
+                      <button
+                        onClick={() => handlePageChange(page + 1)}
+                        disabled={sortedGameResults.length < 25}
+                        className="px-4 py-2 rounded-lg border border-[#1A1A1A] text-[#71717A] text-sm hover:text-white hover:border-[#3F3F46] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        Siguiente →
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
