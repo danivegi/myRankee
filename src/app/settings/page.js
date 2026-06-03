@@ -252,6 +252,327 @@ function ProfileSection({ token, user, onUserUpdate }) {
   );
 }
 
+// ── Banner picker ──────────────────────────────────────────────────────────────
+
+function BannerPickerModal({ onSelect, onClose }) {
+  const [query,        setQuery]        = useState('');
+  const [games,        setGames]        = useState([]);
+  const [searching,    setSearching]    = useState(false);
+  const [selectedGame, setSelectedGame] = useState(null);
+  const [images,       setImages]       = useState(null);
+  const [loadingImgs,  setLoadingImgs]  = useState(false);
+  const [selectedUrl,  setSelectedUrl]  = useState(null);
+  const [position,     setPosition]     = useState(50);
+  const inputRef = useRef(null);
+  const timerRef = useRef(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  useEffect(() => {
+    clearTimeout(timerRef.current);
+    if (query.trim().length < 2) { setGames([]); setSearching(false); return; }
+    setSearching(true);
+    timerRef.current = setTimeout(async () => {
+      try {
+        const res  = await fetch(`/api/games/banner-search?q=${encodeURIComponent(query.trim())}`);
+        const data = await res.json();
+        setGames(data.games ?? []);
+      } catch { /* non-fatal */ }
+      finally   { setSearching(false); }
+    }, 300);
+    return () => clearTimeout(timerRef.current);
+  }, [query]);
+
+  async function pickGame(game) {
+    setSelectedGame(game);
+    setImages(null);
+    setSelectedUrl(null);
+    setPosition(50);
+    setLoadingImgs(true);
+    try {
+      const res  = await fetch(`/api/games/${game.id}/banner-images`);
+      const data = await res.json();
+      setImages(data);
+    } catch {
+      setImages({ artworks: [], screenshots: [] });
+    } finally {
+      setLoadingImgs(false);
+    }
+  }
+
+  function resetToSearch() {
+    setSelectedGame(null);
+    setImages(null);
+    setSelectedUrl(null);
+    setPosition(50);
+  }
+
+  function selectImage(url) {
+    setSelectedUrl(url);
+    setPosition(50);
+  }
+
+  const allImgs = images ? [...(images.artworks ?? []), ...(images.screenshots ?? [])] : [];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl max-h-[90vh] rounded-2xl border border-[#1A1A1A] bg-[#111111] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[#1A1A1A]">
+          <h3 className={`${anton.className} text-white text-xl`}>Elegir banner</h3>
+          <button onClick={onClose} className="text-[#71717A] hover:text-white transition-colors cursor-pointer p-1">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5 min-h-0">
+
+          {/* ── Step 1: game search ── */}
+          {!selectedGame && (
+            <>
+              <div className="relative">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Busca un videojuego..."
+                  className={inputCls}
+                />
+                {searching && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-[#3F3F46] border-t-[#A855F7] rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+
+              {games.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {games.map((g) => (
+                    <button
+                      key={g.id}
+                      onClick={() => pickGame(g)}
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#1A1A1A] transition-colors text-left cursor-pointer"
+                    >
+                      {g.cover ? (
+                        <div className="relative w-8 h-10 flex-shrink-0 rounded overflow-hidden bg-[#0A0A0A]">
+                          <Image src={g.cover} alt={g.name} fill sizes="32px" className="object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-10 flex-shrink-0 rounded bg-[#1A1A1A]" />
+                      )}
+                      <span className="text-white text-sm">{g.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {!searching && query.trim().length >= 2 && games.length === 0 && (
+                <p className="text-[#71717A] text-sm">No se encontraron juegos.</p>
+              )}
+            </>
+          )}
+
+          {/* ── Step 2: image gallery ── */}
+          {selectedGame && (
+            <>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={resetToSearch}
+                  className="text-[#71717A] hover:text-white transition-colors cursor-pointer"
+                  aria-label="Volver a búsqueda"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                  </svg>
+                </button>
+                <span className="text-white text-sm font-semibold">{selectedGame.name}</span>
+              </div>
+
+              {/* Live preview + position slider */}
+              {selectedUrl && (
+                <div className="flex flex-col gap-3">
+                  {/* Banner preview — matches DESKTOP profile banner (5.5 / 1 = 11/2) */}
+                  <div className="relative w-full rounded-xl overflow-hidden ring-1 ring-[#A855F7]/40" style={{ aspectRatio: '11 / 2' }}>
+                    <Image
+                      src={selectedUrl}
+                      alt="Preview banner"
+                      fill
+                      sizes="(max-width: 672px) 100vw, 672px"
+                      className="object-cover"
+                      style={{ objectPosition: `50% ${position}%` }}
+                    />
+                    <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 0%, rgba(10,10,10,0.55) 100%)' }} />
+                    <span className="absolute bottom-2 left-3 text-white/50 text-[10px] font-mono select-none">Vista previa</span>
+                  </div>
+
+                  {/* Vertical position slider */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-[#3F3F46] text-[11px] font-mono w-10 text-right flex-shrink-0">Arriba</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={position}
+                      onChange={(e) => setPosition(Number(e.target.value))}
+                      className="flex-1 h-1.5 rounded-full cursor-pointer accent-[#A855F7]"
+                      aria-label="Posición vertical del banner"
+                    />
+                    <span className="text-[#3F3F46] text-[11px] font-mono w-10 flex-shrink-0">Abajo</span>
+                  </div>
+                </div>
+              )}
+
+              {loadingImgs && (
+                <div className="flex justify-center py-10">
+                  <div className="w-6 h-6 border-2 border-[#3F3F46] border-t-[#A855F7] rounded-full animate-spin" />
+                </div>
+              )}
+
+              {!loadingImgs && allImgs.length === 0 && (
+                <p className="text-[#71717A] text-sm leading-relaxed">
+                  Este juego no tiene imágenes horizontales disponibles. Prueba con otro juego.
+                </p>
+              )}
+
+              {!loadingImgs && allImgs.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {allImgs.map((img) => (
+                    <button
+                      key={img.id}
+                      onClick={() => selectImage(img.full)}
+                      className={`relative aspect-video rounded-lg overflow-hidden ring-2 transition-all cursor-pointer ${
+                        selectedUrl === img.full
+                          ? 'ring-[#A855F7]'
+                          : 'ring-transparent hover:ring-[#3F3F46]'
+                      }`}
+                    >
+                      <Image
+                        src={img.thumb}
+                        alt=""
+                        fill
+                        sizes="(max-width: 640px) 50vw, 33vw"
+                        className="object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer — only visible when an image is selected */}
+        {selectedUrl && (
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#1A1A1A]">
+            <button
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-xl border border-[#3F3F46] text-white text-sm hover:border-[#71717A] transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => onSelect({ url: selectedUrl, position })}
+              className="px-5 py-2.5 rounded-xl bg-[#A855F7] text-[#0A0A0A] text-sm font-bold hover:bg-[#9333EA] transition-colors cursor-pointer"
+            >
+              Guardar banner
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BannerSection({ token, user, onUserUpdate }) {
+  const { addToast } = useToast();
+  const [bannerUrl,      setBannerUrl]      = useState(user.banner_url ?? null);
+  const [bannerPosition, setBannerPosition] = useState(user.banner_position ?? 50);
+  const [showPicker,     setShowPicker]     = useState(false);
+  const [saving,         setSaving]         = useState(false);
+
+  async function save(url, position = 50) {
+    setSaving(true);
+    try {
+      const res  = await fetch('/api/users/banner', {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ banner_url: url, banner_position: url ? position : 50 }),
+      });
+      const data = await res.json();
+      if (!res.ok) { addToast(data.error ?? 'Error al guardar el banner', 'error'); return; }
+      setBannerUrl(url);
+      setBannerPosition(url ? position : 50);
+      onUserUpdate({ banner_url: url, banner_position: url ? position : 50 });
+      addToast(url ? 'Banner actualizado' : 'Banner eliminado');
+    } catch {
+      addToast('Error de conexión', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Section title="Banner de perfil" subtitle="Elige una imagen de un videojuego como banner en tu perfil.">
+      {/* Preview */}
+      <div className="relative h-[110px] w-full rounded-xl overflow-hidden bg-[#0A0A0A]">
+        <Image
+          src={(bannerUrl || '/images/1.png').replace('/t_1080p/', '/t_original/')}
+          alt="Banner actual"
+          fill
+          sizes="(max-width: 1024px) 100vw, 672px"
+          className="object-cover"
+          style={{ objectPosition: `50% ${bannerPosition}%` }}
+        />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 0%, rgba(10,10,10,0.75) 100%)' }} />
+        {!bannerUrl && (
+          <span className="absolute bottom-2 left-3 text-[#3F3F46] text-[11px] font-mono">Banner por defecto</span>
+        )}
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => setShowPicker(true)}
+          className="px-4 py-2 rounded-xl border border-[#3F3F46] text-white text-sm font-semibold hover:border-[#A855F7] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        >
+          Cambiar banner
+        </button>
+        {bannerUrl && (
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => save(null)}
+            className="px-4 py-2 rounded-xl border border-[#1A1A1A] text-[#71717A] text-sm hover:text-red-400 hover:border-red-900/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {saving ? 'Guardando...' : 'Quitar banner'}
+          </button>
+        )}
+      </div>
+
+      {showPicker && (
+        <BannerPickerModal
+          onSelect={({ url, position }) => { setShowPicker(false); save(url, position); }}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
+    </Section>
+  );
+}
+
 // ── Social icon helper ─────────────────────────────────────────────────────────
 
 function SocialIcon({ platform, size = 18 }) {
@@ -873,6 +1194,7 @@ function SettingsContent() {
             {activeTab === 'perfil' && user && (
               <>
                 <ProfileSection token={token} user={user} onUserUpdate={handleUserUpdate} />
+                <BannerSection  token={token} user={user} onUserUpdate={handleUserUpdate} />
                 <SocialLinksSection token={token} username={user.username} />
               </>
             )}

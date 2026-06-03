@@ -8,7 +8,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'image.api.playstation.com' },
       { protocol: 'https', hostname: '*.supabase.co', pathname: '/storage/v1/object/public/**' },
     ],
-    qualities: [75, 100],
+    qualities: [75, 90, 100],
   },
   async headers() {
     return [

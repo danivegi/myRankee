@@ -18,7 +18,7 @@ export async function GET(request, { params }) {
   const hasViewer = viewerId !== null;
   const result = await pool.query(
     `SELECT
-       u.id, u.nombre, u.apellido, u.username, u.bio, u.avatar_url, u.created_at,
+       u.id, u.nombre, u.apellido, u.username, u.bio, u.avatar_url, u.banner_url, u.banner_position, u.created_at,
        (SELECT COUNT(*) FROM ratings WHERE user_id = u.id)::int AS total_ratings,
        (SELECT COUNT(*) FROM reviews WHERE user_id = u.id)::int AS total_reviews,
        (SELECT COUNT(*) FROM backlog  WHERE user_id = u.id)::int AS total_backlog,

@@ -17,7 +17,7 @@ export async function GET(request) {
   }
 
   const result = await pool.query(
-    'SELECT id, nombre, apellido, username, email, avatar_url, bio, created_at, is_admin, is_suspended, suspended_reason FROM users WHERE id = $1',
+    'SELECT id, nombre, apellido, username, email, avatar_url, bio, banner_url, banner_position, created_at, is_admin, is_suspended, suspended_reason FROM users WHERE id = $1',
     [payload.id]
   );
 

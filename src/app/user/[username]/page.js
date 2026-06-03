@@ -502,7 +502,7 @@ function BacklogTab({ username, isOwner, token }) {
         <div className="flex gap-4">
           {[0,1,2].map((i) => <div key={i} className="skeleton-shimmer h-9 w-28 rounded-full" />)}
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 gap-4">
           {Array.from({ length: 12 }).map((_, i) => (
             <div key={i} className="flex flex-col gap-2">
               <div className="skeleton-shimmer rounded-lg" style={{ aspectRatio: '3/4' }} />
@@ -1626,7 +1626,7 @@ function GameCard({ rating }) {
     <Link href={`/game/${rating.igdb_game_id}`} className="flex flex-col gap-2 group">
       <div className="relative aspect-[3/4] w-full rounded-lg overflow-hidden bg-[#141414]">
         {rating.cover
-          ? <Image src={rating.cover} alt={rating.name ?? ''} fill sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 17vw" className="object-cover group-hover:scale-105 transition-transform duration-300" />
+          ? <Image src={rating.cover} alt={rating.name ?? ''} fill sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 13vw" className="object-cover group-hover:scale-105 transition-transform duration-300" />
           : <div className="w-full h-full bg-[#1A1A1A]" />
         }
       </div>
@@ -2143,9 +2143,18 @@ export default function UserProfilePage({ params }) {
       {/* ── Profile Header ── */}
       <div className="flex flex-col">
 
-        {/* Banner */}
-        <div className="relative h-[200px] w-full overflow-hidden">
-          <Image src="/images/1.png" alt="Profile banner" fill sizes="100vw" className="object-cover" priority />
+        {/* Banner — mobile: 4/1, desktop (md+): 5.5/1 (= 11/2). Change here to retune both. */}
+        <div className="relative w-full overflow-hidden aspect-[4/1] md:aspect-[11/2]">
+          <Image
+            src={(profile.banner_url || '/images/1.png').replace('/t_1080p/', '/t_original/')}
+            alt="Profile banner"
+            fill
+            sizes="100vw"
+            className="object-cover"
+            style={{ objectPosition: `50% ${profile.banner_position ?? 50}%` }}
+            quality={90}
+            priority
+          />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 0%, #0A0A0A 85%)' }} />
         </div>
 
@@ -2431,7 +2440,7 @@ export default function UserProfilePage({ params }) {
                     <option value="year_desc">Año de lanzamiento (más nuevos)</option>
                   </select>
                 </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 gap-4">
                   {sortedRatings.map((r) => <GameCard key={r.igdb_game_id} rating={r} />)}
                 </div>
               </>
