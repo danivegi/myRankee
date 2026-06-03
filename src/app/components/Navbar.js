@@ -72,7 +72,7 @@ function SearchBox({ onClose }) {
         ]);
         const gData = await gRes.json();
         const uData = await uRes.json();
-        setGames(Array.isArray(gData) ? gData.slice(0, 3) : []);
+        setGames((Array.isArray(gData?.games) ? gData.games : []).slice(0, 3));
         setUsers(Array.isArray(uData) ? uData.slice(0, 3) : []);
       } catch {
         setGames([]); setUsers([]);

@@ -1385,7 +1385,7 @@ function TopGamePickModal({ topGames, onSelect, onClose }) {
         const res = await fetch(`/api/games/search?q=${encodeURIComponent(query.trim())}`);
         if (res.ok) {
           const data = await res.json();
-          setResults(Array.isArray(data) ? data.filter((g) => !occupiedIds.has(g.id)) : []);
+          setResults((Array.isArray(data?.games) ? data.games : []).filter((g) => !occupiedIds.has(g.id)));
         }
       } catch {
         setResults([]);
