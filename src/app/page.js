@@ -65,7 +65,7 @@ function HeroContent({ featured }) {
   return (
     <>
       <span className="inline-flex items-center gap-1.5 text-[#A855F7] text-[11px] font-bold tracking-[0.2em] uppercase mb-3 md:mb-4">
-        <span>✦</span> Destacado de la semana
+        <span>✦</span> Destacados de la semana
       </span>
       <h1
         className={`${anton.className} text-white leading-none mb-4`}
@@ -112,6 +112,139 @@ function HeroContent({ featured }) {
         </Link>
       </div>
     </>
+  );
+}
+
+// ── Featured Carousel ─────────────────────────────────────────────────────────
+
+function FeaturedCarousel({ slides, loading }) {
+  const [idx,    setIdx]    = useState(0);
+  const [paused, setPaused] = useState(false);
+  const timerRef   = useRef(null);
+  const touchStart = useRef(null);
+  const count      = slides.length;
+
+  useEffect(() => {
+    clearTimeout(timerRef.current);
+    if (!paused && count > 1) {
+      timerRef.current = setTimeout(() => setIdx(i => (i + 1) % count), 5000);
+    }
+    return () => clearTimeout(timerRef.current);
+  }, [idx, paused, count]);
+
+  function goTo(n) {
+    clearTimeout(timerRef.current);
+    setIdx(((n % count) + count) % count);
+  }
+
+  function onTouchStart(e) { touchStart.current = e.touches[0].clientX; }
+  function onTouchEnd(e) {
+    if (touchStart.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStart.current;
+    touchStart.current = null;
+    if (Math.abs(dx) > 50) dx < 0 ? goTo(idx + 1) : goTo(idx - 1);
+  }
+
+  const current = slides[idx] ?? null;
+
+  return (
+    <section
+      className="relative min-h-[520px] md:min-h-[78vh] flex items-end md:items-center overflow-hidden bg-[#0A0A0A]"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Background images — all rendered stacked; only active fades in */}
+      {!loading && slides.map((slide, i) => {
+        const bg = slide.screenshots?.[0] ?? slide.cover ?? null;
+        if (!bg) return null;
+        return (
+          <Image
+            key={slide.id}
+            src={bg}
+            alt=""
+            fill
+            className="object-cover transition-opacity duration-700"
+            style={{ opacity: i === idx ? 1 : 0 }}
+            priority={i === 0}
+            quality={100}
+            sizes="100vw"
+          />
+        );
+      })}
+
+      {/* Overlays */}
+      <div className="absolute inset-0 z-[2]" style={{ background: 'linear-gradient(to right, #0A0A0A 35%, rgba(10,10,10,0.80) 60%, rgba(10,10,10,0.15) 100%)' }} />
+      <div className="absolute inset-0 z-[2]" style={{ background: 'linear-gradient(to top, #0A0A0A 0%, rgba(10,10,10,0.4) 30%, transparent 65%)' }} />
+
+      {/* Slide content */}
+      <div
+        className="relative z-10 px-6 md:px-12 py-14 md:py-20 transition-opacity duration-700"
+        style={{ opacity: loading ? 0.3 : 1, maxWidth: '640px' }}
+      >
+        {loading ? (
+          <HeroSkeleton />
+        ) : current ? (
+          <HeroContent key={current.id} featured={current} />
+        ) : (
+          <>
+            <span className="inline-block text-[#A855F7] text-[11px] font-bold tracking-[0.2em] uppercase mb-3">
+              ✦ Bienvenido
+            </span>
+            <h1 className={`${anton.className} text-white leading-none mb-4`} style={{ fontSize: 'clamp(2rem,4.5vw,4.2rem)' }}>
+              Descubre, puntúa<br />y comparte
+            </h1>
+            <p className="text-[#A1A1AA] text-sm leading-relaxed mb-6" style={{ maxWidth: '420px' }}>
+              Tu comunidad de videojuegos. Lleva un registro de todo lo que juegas y descubre nuevos títulos.
+            </p>
+            <Link href="/search" className="px-6 py-3 rounded-full bg-[#A855F7] text-white font-semibold text-sm hover:bg-[#9333EA] transition-colors">
+              Explorar juegos
+            </Link>
+          </>
+        )}
+      </div>
+
+      {/* Left / right arrows — desktop only */}
+      {!loading && count > 1 && (
+        <>
+          <button
+            onClick={() => goTo(idx - 1)}
+            aria-label="Juego anterior"
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/50 border border-white/20 text-white hidden md:flex items-center justify-center hover:bg-black/70 hover:border-white/40 transition-colors cursor-pointer"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <button
+            onClick={() => goTo(idx + 1)}
+            aria-label="Juego siguiente"
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/50 border border-white/20 text-white hidden md:flex items-center justify-center hover:bg-black/70 hover:border-white/40 transition-colors cursor-pointer"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </>
+      )}
+
+      {/* Dot indicators */}
+      {!loading && count > 1 && (
+        <div className="absolute bottom-5 md:bottom-7 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+          {slides.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => goTo(i)}
+              aria-label={`Ir al destacado ${i + 1}`}
+              className={`rounded-full transition-all duration-300 cursor-pointer ${
+                i === idx ? 'w-5 h-2 bg-[#A855F7]' : 'w-2 h-2 bg-white/30 hover:bg-white/50'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -316,7 +449,7 @@ function ReviewCard({ item }) {
 export default function HomePage() {
   const [mounted, setMounted] = useState(false);
 
-  const [featured,        setFeatured]        = useState(null);
+  const [featured,        setFeatured]        = useState([]);
   const [featuredLoading, setFeaturedLoading] = useState(true);
 
   const [topRated,        setTopRated]        = useState([]);
@@ -346,7 +479,7 @@ export default function HomePage() {
     const get = (url) => fetch(url).then(r => r.json()).catch(() => null);
 
     get('/api/discover/featured')
-      .then(d => { if (d && !d.error) setFeatured(d); })
+      .then(d => { if (Array.isArray(d)) setFeatured(d); })
       .finally(() => setFeaturedLoading(false));
 
     get('/api/discover/top-rated')
@@ -381,72 +514,11 @@ export default function HomePage() {
       .finally(() => setReviewsLoading(false));
   }, []);
 
-  const heroBg = featured?.screenshots?.[0] ?? featured?.cover ?? null;
-
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
       <Navbar />
 
-      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <section className="relative min-h-[520px] md:min-h-[78vh] flex items-end md:items-center overflow-hidden bg-[#0A0A0A]">
-        {heroBg && (
-          <Image
-            src={heroBg}
-            alt=""
-            fill
-            className="object-cover"
-            priority
-            quality={100}
-            sizes="100vw"
-          />
-        )}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(to right, #0A0A0A 35%, rgba(10,10,10,0.80) 60%, rgba(10,10,10,0.15) 100%)',
-          }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(to top, #0A0A0A 0%, rgba(10,10,10,0.4) 30%, transparent 65%)',
-          }}
-        />
-
-        <div
-          className="relative z-10 px-6 md:px-12 py-14 md:py-20 transition-opacity duration-700"
-          style={{ opacity: featuredLoading ? 0.3 : 1, maxWidth: '640px' }}
-        >
-          {featuredLoading ? (
-            <HeroSkeleton />
-          ) : featured ? (
-            <HeroContent featured={featured} />
-          ) : (
-            <>
-              <span className="inline-block text-[#A855F7] text-[11px] font-bold tracking-[0.2em] uppercase mb-3">
-                ✦ Bienvenido
-              </span>
-              <h1
-                className={`${anton.className} text-white leading-none mb-4`}
-                style={{ fontSize: 'clamp(2rem,4.5vw,4.2rem)' }}
-              >
-                Descubre, puntúa<br />y comparte
-              </h1>
-              <p className="text-[#A1A1AA] text-sm leading-relaxed mb-6" style={{ maxWidth: '420px' }}>
-                Tu comunidad de videojuegos. Lleva un registro de todo lo que juegas y descubre nuevos títulos.
-              </p>
-              <Link
-                href="/search"
-                className="px-6 py-3 rounded-full bg-[#A855F7] text-white font-semibold text-sm hover:bg-[#9333EA] transition-colors"
-              >
-                Explorar juegos
-              </Link>
-            </>
-          )}
-        </div>
-      </section>
+      <FeaturedCarousel slides={featured} loading={featuredLoading} />
 
       {/* ── Mejor puntuados ──────────────────────────────────────────────────── */}
       <Section title="Mejor puntuados por la comunidad" delay={0} mounted={mounted}>
