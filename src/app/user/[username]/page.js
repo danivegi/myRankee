@@ -269,7 +269,7 @@ function BacklogGridCard({ item, isOwner, onStatusChange, onRemove }) {
       >
         <Link href={`/game/${item.igdb_game_id}`} className="absolute inset-0 block">
           {item.game.cover ? (
-            <Image src={item.game.cover} alt={item.game.name ?? ''} fill sizes="(max-width: 768px) 33vw, 200px" className="object-cover" />
+            <Image src={item.game.cover} alt={item.game.name ?? ''} fill sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 13vw" className="object-cover" />
           ) : (
             <div className="w-full h-full bg-[#1A1A1A] flex items-center justify-center">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -640,7 +640,7 @@ function BacklogTab({ username, isOwner, token }) {
           </div>
         </div>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 gap-4">
           {sorted.map((item) => (
             <BacklogGridCard
               key={item.igdb_game_id}
@@ -1332,7 +1332,7 @@ function FavCard({ fav, isOwner, onRemove }) {
       >
         <Link href={`/game/${fav.igdb_game_id}`} className="absolute inset-0 block">
           {fav.cover ? (
-            <Image src={fav.cover} alt={fav.name ?? ''} fill sizes="(max-width: 768px) 33vw, 20vw" className="object-cover" />
+            <Image src={fav.cover} alt={fav.name ?? ''} fill sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 13vw" className="object-cover" />
           ) : (
             <div className="w-full h-full bg-[#1A1A1A] flex items-center justify-center">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F3F46" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -2495,7 +2495,7 @@ export default function UserProfilePage({ params }) {
         {activeTab === 'Favoritos' && (
           <div key="tab-favoritos" className="tab-content pb-10">
             {favoritesLoading ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 gap-4">
                 {Array.from({ length: 12 }).map((_, i) => (
                   <div key={i} className="flex flex-col gap-2">
                     <div className="skeleton-shimmer rounded-lg" style={{ aspectRatio: '3/4' }} />
@@ -2520,7 +2520,7 @@ export default function UserProfilePage({ params }) {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 gap-4">
                 {favorites.map((fav) => (
                   <FavCard
                     key={fav.igdb_game_id}
