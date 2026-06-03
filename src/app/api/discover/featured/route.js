@@ -84,7 +84,7 @@ export async function GET() {
         id:            g.id,
         name:          g.name,
         cover:         coverUrl(g.cover?.image_id, 'cover_big_2x'),
-        screenshots:   (g.screenshots ?? []).slice(0, 3).map(s => coverUrl(s.image_id, 'screenshot_big')),
+        screenshots:   (g.screenshots ?? []).slice(0, 3).map(s => coverUrl(s.image_id, 'original')),
         summary:       g.summary ?? null,
         genres:        g.genres?.map(gn => translateGenre(gn.name)) ?? [],
         average_score: avgScore,
