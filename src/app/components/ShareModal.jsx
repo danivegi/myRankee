@@ -301,13 +301,19 @@ function ShareCard({ gameName, gameCover, gameYear, gameGenre, userScore, review
 
 // ── Social share button ───────────────────────────────────────────────────────
 
-function SocialBtn({ onClick, icon, label }) {
+function SocialBtn({ onClick, icon, label, disabled, loading }) {
   return (
     <button
-      onClick={onClick}
-      className="flex flex-col items-center gap-1.5 py-3 rounded-xl border border-[#1A1A1A] text-white text-xs hover:bg-[#1A1A1A] transition-colors cursor-pointer"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border border-[#1A1A1A] text-xs transition-colors ${
+        disabled ? 'text-[#71717A] opacity-50 cursor-not-allowed' : 'text-white hover:bg-[#1A1A1A] cursor-pointer'
+      }`}
     >
-      {icon}
+      {loading
+        ? <span className="w-[18px] h-[18px] rounded-full border border-[#71717A] border-t-transparent animate-spin" style={{ display: 'inline-block', flexShrink: 0 }} />
+        : icon
+      }
       <span>{label}</span>
     </button>
   );
@@ -335,6 +341,7 @@ export default function ShareModal({
   const [imgDataUrl,     setImgDataUrl]     = useState(null);
   const [generating,     setGenerating]     = useState(false);
   const [genError,       setGenError]       = useState(false);
+  const [retryCount,     setRetryCount]     = useState(0);
   const [copied,         setCopied]         = useState('');
   const [communityStats, setCommunityStats] = useState(null);
   const [coverBase64,    setCoverBase64]    = useState(null);
@@ -404,11 +411,13 @@ export default function ShareModal({
     fetch(imgDataUrl).then(r => r.blob()).then(setImgBlob).catch(() => {});
   }, [imgDataUrl]);
 
-  // Generate image once: tab is active, image is loaded, stats ready (for game shares)
+  // Generate image eagerly when cover + stats are ready (not gated on active tab).
+  // This ensures imgBlob is ready before the user taps Instagram, satisfying the iOS
+  // user-gesture requirement (navigator.share must be called synchronously on tap).
   useEffect(() => {
-    if (activeTab !== 'Tarjeta' || imgDataUrl || generating) return;
+    if (imgDataUrl || generating) return;
     if (isGame && communityStats === null) return;
-    if (!imageLoaded) return; // wait for cover img onLoad before capturing
+    if (!imageLoaded) return;
     if (!cardRef.current) return;
     setGenerating(true);
     setGenError(false);
@@ -419,7 +428,7 @@ export default function ShareModal({
       .catch(() => toPng(cardRef.current, opts))
       .then((url) => { setImgDataUrl(url); setGenerating(false); })
       .catch(() => { setGenError(true); setGenerating(false); });
-  }, [activeTab, communityStats, imageLoaded]);
+  }, [communityStats, imageLoaded, retryCount]);
 
   function recordShare() {
     if (!reviewId) return;
@@ -496,9 +505,9 @@ export default function ShareModal({
   }
 
   const socialBtns = [
-    { key: 'twitter',   label: 'Twitter / X', Icon: IconTwitter,   handler: () => handleSocial('twitter') },
-    { key: 'whatsapp',  label: 'WhatsApp',    Icon: IconWhatsApp,  handler: () => handleSocial('whatsapp') },
-    { key: 'instagram', label: 'Instagram',   Icon: IconInstagram, handler: handleInstagram },
+    { key: 'twitter',   label: 'Twitter / X', Icon: IconTwitter,   handler: () => handleSocial('twitter'),  disabled: false,    loading: false },
+    { key: 'whatsapp',  label: 'WhatsApp',    Icon: IconWhatsApp,  handler: () => handleSocial('whatsapp'), disabled: false,    loading: false },
+    { key: 'instagram', label: 'Instagram',   Icon: IconInstagram, handler: handleInstagram,                disabled: !imgBlob, loading: !imgBlob && !genError },
   ];
 
   return (
@@ -584,7 +593,7 @@ export default function ShareModal({
                     <div className="flex flex-col items-center gap-3 p-6 text-center">
                       <p className="text-[#71717A] text-sm">No se pudo generar la imagen.</p>
                       <button
-                        onClick={() => { setImgDataUrl(null); setGenError(false); }}
+                        onClick={() => { setImgDataUrl(null); setImgBlob(null); setGenError(false); setRetryCount(n => n + 1); }}
                         className="text-[#A855F7] text-xs hover:underline cursor-pointer"
                       >
                         Reintentar
@@ -607,10 +616,16 @@ export default function ShareModal({
 
                 {/* Social grid */}
                 <div className="grid grid-cols-2 gap-2">
-                  {socialBtns.map(({ key, label, Icon, handler }) => (
-                    <button key={key} onClick={handler}
-                      className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#1A1A1A] text-white text-xs hover:bg-[#1A1A1A] transition-colors cursor-pointer">
-                      <Icon />{label}
+                  {socialBtns.map(({ key, label, Icon, handler, disabled, loading }) => (
+                    <button key={key} onClick={disabled ? undefined : handler} disabled={disabled}
+                      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#1A1A1A] text-xs transition-colors ${
+                        disabled ? 'text-[#71717A] opacity-50 cursor-not-allowed' : 'text-white hover:bg-[#1A1A1A] cursor-pointer'
+                      }`}>
+                      {loading
+                        ? <span className="w-[15px] h-[15px] rounded-full border border-[#71717A] border-t-transparent animate-spin" style={{ display: 'inline-block', flexShrink: 0 }} />
+                        : <Icon />
+                      }
+                      {label}
                     </button>
                   ))}
                   <button
@@ -648,8 +663,8 @@ export default function ShareModal({
                 <div className="border-t border-[#1A1A1A] pt-4 flex flex-col gap-2">
                   <p className="text-[#71717A] text-xs">Compartir en</p>
                   <div className="grid grid-cols-3 gap-2">
-                    {socialBtns.map(({ key, label, Icon, handler }) => (
-                      <SocialBtn key={key} onClick={handler} icon={<Icon size={18} />} label={label} />
+                    {socialBtns.map(({ key, label, Icon, handler, disabled, loading }) => (
+                      <SocialBtn key={key} onClick={handler} icon={<Icon size={18} />} label={label} disabled={disabled} loading={loading} />
                     ))}
                   </div>
                 </div>
@@ -677,8 +692,8 @@ export default function ShareModal({
                 <div className="border-t border-[#1A1A1A] pt-4 flex flex-col gap-2">
                   <p className="text-[#71717A] text-xs">Compartir directo en</p>
                   <div className="grid grid-cols-3 gap-2">
-                    {socialBtns.map(({ key, label, Icon, handler }) => (
-                      <SocialBtn key={key} onClick={handler} icon={<Icon size={18} />} label={label} />
+                    {socialBtns.map(({ key, label, Icon, handler, disabled, loading }) => (
+                      <SocialBtn key={key} onClick={handler} icon={<Icon size={18} />} label={label} disabled={disabled} loading={loading} />
                     ))}
                   </div>
                 </div>
