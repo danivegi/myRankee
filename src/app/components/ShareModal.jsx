@@ -412,11 +412,11 @@ export default function ShareModal({
     if (!cardRef.current) return;
     setGenerating(true);
     setGenError(false);
-    toPng(cardRef.current, {
-      pixelRatio: 2,
-      backgroundColor: '#0A0A0A',
-      skipFonts: true,
-    })
+    const opts = { pixelRatio: 2, backgroundColor: '#0A0A0A', skipFonts: true };
+    // iOS Safari often fails on the first toPng call (SVG/canvas warm-up issue);
+    // a single retry fixes it in virtually all cases.
+    toPng(cardRef.current, opts)
+      .catch(() => toPng(cardRef.current, opts))
       .then((url) => { setImgDataUrl(url); setGenerating(false); })
       .catch(() => { setGenError(true); setGenerating(false); });
   }, [activeTab, communityStats, imageLoaded]);
@@ -460,31 +460,24 @@ export default function ShareModal({
   }
 
   async function handleInstagram() {
-    recordShare();
-    // If the card blob is ready, share the image file via the Web Share API
+    // Never share a URL — Instagram button must only ever share the image file or download it.
     if (imgBlob) {
       const file = new File([imgBlob], 'myrankee-card.png', { type: 'image/png' });
       if (navigator.canShare?.({ files: [file] })) {
         try {
           await navigator.share({ files: [file], title: `${gameName} en myRankee` });
+          recordShare();
           return;
         } catch (err) {
           if (err.name === 'AbortError') return; // user cancelled — do nothing
-          // Real error: fall through to download
+          // Real share error: fall through to download
         }
       }
-      // Desktop or browser without file-share support — download instead
-      handleDownload();
-      return;
     }
-    // No card image (other tabs): try generic Web Share for text+URL
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `${gameName} en myRankee`, text: shareText, url: shareUrl });
-      } catch (err) {
-        if (err.name !== 'AbortError') { /* ignore cancel */ }
-      }
-    }
+    // Image blob not available or file-share unsupported: download so the user can upload manually.
+    // handleDownload is a no-op if imgDataUrl is also null (generation failed), which is preferable
+    // to sharing a link.
+    handleDownload();
   }
 
   function flashCopied(key) {
