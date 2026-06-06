@@ -2,11 +2,18 @@ import { NextResponse } from 'next/server';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-const ALLOWED_ORIGINS = new Set([
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://myrankee.vercel.app',
-]);
+// Override via ALLOWED_ORIGINS env var (comma-separated) in Vercel for zero-deploy domain changes.
+const ALLOWED_ORIGINS = new Set(
+  process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
+    : [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'https://myrankee.vercel.app',
+        'https://myrankee.com',
+        'https://www.myrankee.com',
+      ]
+);
 
 export function proxy(request) {
   const { pathname } = request.nextUrl;
