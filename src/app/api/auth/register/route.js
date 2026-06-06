@@ -1,5 +1,4 @@
-// TEMPORARY: Auto-verify new users for fair demo.
-// TODO: Re-enable email verification after configuring myrankee.com domain in Resend.
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
 import { checkPassword } from '@/lib/password';
@@ -9,6 +8,7 @@ import { createDefaultNotificationPreferences } from '@/lib/init-notifications';
 import { checkRateLimit, getIp, rateLimitResponse, LIMITS } from '@/lib/rate-limit';
 import { validate, userRegistrationSchema, validationErrorResponse } from '@/lib/validation';
 import { verifyCaptcha } from '@/lib/captcha';
+import { sendVerificationEmail } from '@/lib/email';
 
 const DISPOSABLE_DOMAINS = new Set([
   'mailinator.com','guerrillamail.com','tempmail.com','throwam.com','yopmail.com',
@@ -112,7 +112,7 @@ export async function POST(request) {
 
     const dbResult = await pool.query(
       `INSERT INTO users (nombre, apellido, username, email, password_hash, email_verified, terms_accepted_at, age_confirmed)
-       VALUES ($1, $2, $3, $4, $5, true, NOW(), $6)
+       VALUES ($1, $2, $3, $4, $5, false, NOW(), $6)
        RETURNING id, username, email`,
       [nombre, apellido, username, email, password_hash, age_confirmed === true]
     );
@@ -120,6 +120,16 @@ export async function POST(request) {
     const user = dbResult.rows[0];
 
     await createDefaultNotificationPreferences(user.id).catch(() => {});
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await pool.query(
+      `INSERT INTO email_verifications (user_id, token, expires_at) VALUES ($1, $2, $3)`,
+      [user.id, verificationToken, verificationExpiry]
+    );
+    sendVerificationEmail(email, verificationToken, username).catch((e) =>
+      console.error('[register] sendVerificationEmail failed:', e.message)
+    );
 
     // Mark attempt as successful
     await pool.query(
@@ -136,7 +146,7 @@ export async function POST(request) {
     });
 
     return Response.json(
-      { message: '¡Bienvenido a myRankee! Tu cuenta está lista.', email },
+      { message: 'Cuenta creada. Revisa tu correo para verificarla.', email },
       { status: 201 }
     );
   } catch (err) {

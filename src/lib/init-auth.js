@@ -6,7 +6,7 @@ export async function ensureAuthTables() {
   if (ready) return;
   try {
     await pool.query(
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT true`
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false`
     );
     await pool.query(`
       CREATE TABLE IF NOT EXISTS email_verifications (

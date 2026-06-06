@@ -67,7 +67,7 @@ export default function LoginPage() {
         setCaptchaToken('');
 
         if (data.needs_verification) {
-          setNeedsVerification(data.email || email);
+          setNeedsVerification(data.email || identifier);
           return;
         }
         if (data.suspended_reason) {
