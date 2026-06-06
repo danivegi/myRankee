@@ -3,8 +3,8 @@ import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
 import Navbar from '@/app/components/Navbar';
 import GameInteractions from '@/app/components/GameInteractions';
+import PersonalRating from '@/app/components/PersonalRating';
 import { queryIGDB, coverUrl } from '@/lib/igdb';
-import pool from '@/lib/db';
 import { translateGenre, translatePlatform } from '@/lib/translations';
 import { getTranslatedSummary } from '@/lib/game-translations';
 
@@ -106,35 +106,12 @@ export async function generateMetadata({ params, searchParams }) {
   }
 }
 
-// ── Inline star renderer (server-safe) ───────────────────────────────────────
-
-function CommunityStars({ score, size = 20 }) {
-  const stars = [];
-  for (let i = 1; i <= 5; i++) {
-    const t = score >= i ? 'full' : score >= i - 0.5 ? 'half' : 'empty';
-    stars.push(
-      <span key={i} style={{ color: t === 'empty' ? '#3F3F46' : '#A855F7', fontSize: size, lineHeight: 1 }}>
-        {t === 'full' ? '★' : t === 'half' ? '½' : '☆'}
-      </span>
-    );
-  }
-  return <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}>{stars}</span>;
-}
-
 export default async function GameDetailPage({ params }) {
   const { id } = await params;
 
   let game = null;
-  let communityRating = null;
 
-  const [igdbResults, communityRes] = await Promise.allSettled([
-    fetchGame(id),
-    pool.query(
-      `SELECT ROUND(AVG(score)::numeric, 1) AS avg_score, COUNT(*)::int AS total
-       FROM ratings WHERE igdb_game_id = $1`,
-      [id]
-    ),
-  ]);
+  const [igdbResults] = await Promise.allSettled([fetchGame(id)]);
 
   let summaryTranslated = false;
 
@@ -167,13 +144,6 @@ export default async function GameDetailPage({ params }) {
     }
   } catch {
     // game stays null
-  }
-
-  if (communityRes.status === 'fulfilled') {
-    const row = communityRes.value.rows[0];
-    if (row.total > 0) {
-      communityRating = { avg: parseFloat(row.avg_score), total: row.total };
-    }
   }
 
   if (!game) {
@@ -226,22 +196,8 @@ export default async function GameDetailPage({ params }) {
             </div>
           </div>
 
-          {/* Community score */}
-          {communityRating ? (
-            <div className="flex items-center gap-3">
-              <CommunityStars score={communityRating.avg} size={22} />
-              <span className="text-white font-bold text-2xl">{communityRating.avg}</span>
-              <div className="flex flex-col leading-tight">
-                <span className="text-[#71717A] text-xs">{communityRating.total} {communityRating.total === 1 ? 'valoración' : 'valoraciones'}</span>
-                <span className="text-[#A855F7] text-[10px] font-mono uppercase tracking-wide">myRankee</span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-0.5">
-              <p className="text-[#71717A] text-sm">Aún no hay puntuaciones</p>
-              <p className="text-[#A855F7] text-xs">¡Sé el primero en puntuar!</p>
-            </div>
-          )}
+          {/* Personal rating — client component, shows user's own score */}
+          <PersonalRating gameId={game.id} />
 
           {/* Genre + platform tags */}
           <div className="flex flex-col gap-2">
