@@ -3,6 +3,7 @@ import "./globals.css";
 import { ToastProvider } from "./components/ToastProvider";
 import CookieBanner from "./components/CookieBanner";
 import ConditionalFooter from "./components/ConditionalFooter";
+import AnalyticsProvider from "./components/AnalyticsProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -72,6 +73,7 @@ export default function RootLayout({ children }) {
           <ConditionalFooter />
           <CookieBanner />
         </ToastProvider>
+        <AnalyticsProvider />
       </body>
     </html>
   );
