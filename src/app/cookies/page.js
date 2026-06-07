@@ -12,7 +12,7 @@ export const metadata = {
 
 const SECTIONS = [
   { id: 'que-son',      label: '¿Qué son las cookies?' },
-  { id: 'tipos',        label: 'Cookies que usamos' },
+  { id: 'tipos',        label: 'Almacenamiento local' },
   { id: 'gestion',      label: 'Gestión en el navegador' },
   { id: 'preferencias', label: 'Preferencias en MyRankee' },
 ];
@@ -62,7 +62,7 @@ export default function CookiesPage() {
           <h1 className={`${anton.className} text-white text-4xl md:text-5xl leading-none`}>
             Política de Cookies
           </h1>
-          <p className="text-[#71717A] text-sm">Última actualización: 29 de mayo de 2026</p>
+          <p className="text-[#71717A] text-sm">Última actualización: 7 de junio de 2026</p>
         </div>
 
         <div className="flex gap-12">
@@ -90,31 +90,31 @@ export default function CookiesPage() {
                 tu sesión iniciada o tus preferencias.
               </P>
               <P>
-                MyRankee también utiliza tecnologías similares como <strong className="text-white">localStorage</strong>,
-                que es un almacenamiento local del navegador que funciona de forma parecida a las cookies pero
-                no se envía automáticamente al servidor con cada solicitud.
+                En la práctica, MyRankee utiliza exclusivamente <strong className="text-white">localStorage</strong> — almacenamiento local del navegador que funciona de forma similar a las cookies pero que no se envía automáticamente al servidor. <strong className="text-white">No instalamos ninguna cookie HTTP</strong> en tu dispositivo. Esta política emplea el término "cookies" en el sentido amplio habitual en este tipo de documentos, para referirnos también a este almacenamiento local equivalente.
               </P>
             </Section>
 
-            <Section id="tipos" title="Cookies y almacenamiento que usamos">
+            <Section id="tipos" title="Almacenamiento local que usamos">
 
               <div className="p-4 rounded-xl border border-green-900/40 bg-green-950/20 flex items-start gap-3">
                 <svg className="flex-shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
                 <p className="text-[#9CA3AF] text-sm leading-relaxed">
-                  MyRankee <strong className="text-white">solo usa almacenamiento esencial</strong> para el
-                  funcionamiento básico del servicio. No usamos cookies de seguimiento, analíticas de terceros
-                  ni publicidad.
+                  MyRankee <strong className="text-white">solo usa almacenamiento local esencial</strong> (localStorage) para el funcionamiento básico del servicio. No usamos cookies de seguimiento ni de publicidad. Para análisis de uso empleamos Vercel Web Analytics, una herramienta que <strong className="text-white">no usa cookies</strong> ni rastrea usuarios individualmente.
                 </p>
               </div>
+
+              <p className="text-[#71717A] text-xs leading-relaxed">
+                Las dos entradas siguientes son almacenamiento <strong className="text-white">localStorage</strong> — no son cookies HTTP. Ninguna se transmite al servidor de forma automática.
+              </p>
 
               <div className="rounded-xl border border-[#1A1A1A] overflow-hidden">
                 <table className="w-full">
                   <thead>
                     <tr className="bg-[#111111]">
                       <th className="text-left py-3 px-4 text-[#71717A] text-[11px] font-mono uppercase tracking-wider">Nombre</th>
-                      <th className="text-left py-3 px-4 text-[#71717A] text-[11px] font-mono uppercase tracking-wider">Tipo</th>
+                      <th className="text-left py-3 px-4 text-[#71717A] text-[11px] font-mono uppercase tracking-wider">Categoría</th>
                       <th className="text-left py-3 px-4 text-[#71717A] text-[11px] font-mono uppercase tracking-wider">Finalidad</th>
                       <th className="text-left py-3 px-4 text-[#71717A] text-[11px] font-mono uppercase tracking-wider">Duración</th>
                     </tr>
@@ -143,7 +143,7 @@ export default function CookiesPage() {
                   <span className="text-[#3F3F46] text-xs font-mono mt-0.5">✗</span>
                   <div>
                     <p className="text-white text-sm font-semibold">Cookies analíticas</p>
-                    <p className="text-[#71717A] text-sm mt-0.5">No usamos ninguna. No hay Google Analytics, Mixpanel ni herramientas similares.</p>
+                    <p className="text-[#71717A] text-sm mt-0.5">No instalamos cookies de analítica. Utilizamos Vercel Web Analytics, una herramienta de análisis respetuosa con la privacidad que <strong className="text-white">funciona sin cookies</strong>: no instala ninguna cookie en tu dispositivo, no rastrea usuarios entre sitios y solo recopila datos de navegación agregados y anónimos (páginas visitadas, etc.). A diferencia de herramientas como Google Analytics o Mixpanel, no construye perfiles individuales de usuarios.</p>
                   </div>
                 </div>
                 <div className="p-4 rounded-xl border border-[#1A1A1A] bg-[#111111] flex items-start gap-3">
@@ -175,8 +175,7 @@ export default function CookiesPage() {
                 ))}
               </div>
               <P>
-                Ten en cuenta que borrar las cookies eliminará también tu sesión en MyRankee, por lo que
-                tendrás que iniciar sesión de nuevo.
+                Ten en cuenta que borrar el almacenamiento local del sitio (localStorage) eliminará también tu sesión en MyRankee, por lo que tendrás que iniciar sesión de nuevo.
               </P>
             </Section>
 
@@ -212,7 +211,7 @@ export default function CookiesPage() {
               </div>
               <P>
                 ¿Tienes dudas? Escríbenos a{' '}
-                <span className="text-white">myrankee@gmail.com</span>
+                <span className="text-white">privacidad@myrankee.com</span>
               </P>
             </Section>
 

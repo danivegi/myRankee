@@ -56,7 +56,7 @@ export default function PrivacyPage() {
           <h1 className={`${anton.className} text-white text-4xl md:text-5xl leading-none`}>
             Política de Privacidad
           </h1>
-          <p className="text-[#71717A] text-sm">Última actualización: 29 de mayo de 2026</p>
+          <p className="text-[#71717A] text-sm">Última actualización: 7 de junio de 2026</p>
         </div>
 
         <div className="flex gap-12">
@@ -87,7 +87,7 @@ export default function PrivacyPage() {
               </P>
               <P>
                 <strong className="text-white">Responsable del tratamiento:</strong> Daniel Vega Alcázar, responsable de la plataforma MyRankee.<br />
-                <strong className="text-white">Correo de contacto:</strong> myrankee@gmail.com<br />
+                <strong className="text-white">Correo de contacto:</strong> privacidad@myrankee.com<br />
                 <strong className="text-white">Ámbito de aplicación:</strong> Unión Europea y resto del mundo.
               </P>
             </Section>
@@ -128,10 +128,10 @@ export default function PrivacyPage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <p className="text-white text-sm font-semibold">Cookies</p>
+                <p className="text-white text-sm font-semibold">Almacenamiento local (localStorage)</p>
                 <ul className="flex flex-col gap-1.5">
-                  <Li>Token de sesión JWT (almacenado en localStorage, necesario para el funcionamiento)</Li>
-                  <Li>Preferencia de consentimiento de cookies</Li>
+                  <Li>Token de sesión JWT — almacenado en localStorage del navegador, necesario para mantener la sesión iniciada</Li>
+                  <Li>Preferencia del banner de privacidad — almacenada en localStorage para no mostrar el aviso de nuevo</Li>
                 </ul>
               </div>
             </Section>
@@ -154,6 +154,9 @@ export default function PrivacyPage() {
                 <Li>
                   <strong className="text-white">Cumplir con obligaciones legales</strong> — Base legal: cumplimiento de una obligación legal (art. 6.1.c RGPD).
                 </Li>
+                <Li>
+                  <strong className="text-white">Analizar el uso de la plataforma de forma agregada y anónima</strong>, para entender cómo se utiliza el servicio y mejorarlo — Base legal: interés legítimo (art. 6.1.f RGPD). No se procesan datos personales identificables en este análisis.
+                </Li>
               </ul>
               <P>
                 No utilizamos tus datos para publicidad personalizada. No vendemos tus datos a terceros.
@@ -173,10 +176,13 @@ export default function PrivacyPage() {
                   <strong className="text-white">Vercel (alojamiento de la aplicación):</strong> procesa las solicitudes del servidor para servir la plataforma. Vercel opera desde Estados Unidos.
                 </Li>
                 <Li>
-                  <strong className="text-white">Resend (envío de emails transaccionales):</strong> recibe tu dirección de email únicamente para enviarte correos de verificación de cuenta y recuperación de contraseña. Resend opera desde Estados Unidos.
+                  <strong className="text-white">Resend (envío de emails transaccionales):</strong> recibe tu dirección de email únicamente para enviarte correos de verificación de cuenta y recuperación de contraseña. Resend procesa los datos en la Unión Europea (Irlanda).
                 </Li>
                 <Li>
                   <strong className="text-white">hCaptcha (protección anti-bot):</strong> se utiliza en el registro y el inicio de sesión para prevenir accesos automatizados y abuso. Para ello, hCaptcha puede procesar datos técnicos como tu dirección IP e información sobre tu navegador. hCaptcha opera desde Estados Unidos.
+                </Li>
+                <Li>
+                  <strong className="text-white">Vercel Web Analytics (análisis de uso):</strong> utilizamos Vercel Web Analytics para entender cómo se usa la plataforma. Esta herramienta es respetuosa con la privacidad: <strong className="text-white">no utiliza cookies</strong>, no rastrea a los usuarios entre sitios ni construye perfiles individuales. Los datos recogidos son agregados y anónimos (páginas visitadas, frecuencia de uso, etc.). Además, cualquier identificador personal presente en las URLs (como nombres de usuario) se elimina antes de enviar los datos. Vercel Web Analytics opera desde Estados Unidos.
                 </Li>
               </ul>
               <P>
@@ -186,7 +192,7 @@ export default function PrivacyPage() {
               <div className="flex flex-col gap-2 mt-1">
                 <p className="text-white text-sm font-semibold">Transferencias internacionales de datos</p>
                 <P>
-                  Tu base de datos principal está alojada en la Unión Europea (Frankfurt, Alemania). No obstante, algunos de nuestros proveedores (Vercel, Resend y hCaptcha) están ubicados en Estados Unidos, por lo que determinados datos pueden ser tratados fuera del Espacio Económico Europeo.
+                  Tu base de datos principal está alojada en la Unión Europea (Frankfurt, Alemania). No obstante, algunos de nuestros proveedores (Vercel, hCaptcha y Vercel Web Analytics) están ubicados en Estados Unidos, por lo que determinados datos pueden ser tratados fuera del Espacio Económico Europeo.
                 </P>
                 <P>
                   En esos casos, las transferencias se realizan con las garantías adecuadas previstas por el RGPD, como las Cláusulas Contractuales Tipo aprobadas por la Comisión Europea o la adhesión de dichos proveedores al marco EU-U.S. Data Privacy Framework, según corresponda en cada caso.
@@ -210,8 +216,7 @@ export default function PrivacyPage() {
                   para prevención de fraude.
                 </Li>
                 <Li>
-                  <strong className="text-white">Tokens de email:</strong> Los tokens de verificación y
-                  recuperación de contraseña expiran en 24 horas.
+                  <strong className="text-white">Tokens de email:</strong> Los tokens de verificación de email expiran en 24 horas; los tokens de recuperación de contraseña expiran en 1 hora.
                 </Li>
               </ul>
             </Section>
@@ -243,7 +248,7 @@ export default function PrivacyPage() {
                     <Link href="/settings" className="text-[#A855F7] hover:underline">Configuración → Eliminar cuenta</Link>
                   </Li>
                   <Li>
-                    <strong className="text-white">Otros derechos:</strong> Escríbenos a myrankee@gmail.com
+                    <strong className="text-white">Otros derechos:</strong> Escríbenos a privacidad@myrankee.com
                   </Li>
                 </ul>
               </div>
@@ -260,7 +265,7 @@ export default function PrivacyPage() {
                 Para registrarte y crear una cuenta en MyRankee debes tener al menos 14 años, de acuerdo con la legislación española en materia de protección de datos. Durante el registro deberás confirmar que cumples este requisito de edad.
               </P>
               <P>
-                Si tienes conocimiento de que un menor de 14 años nos ha facilitado datos personales, te rogamos que nos lo comuniques en myrankee@gmail.com para proceder a su eliminación.
+                Si tienes conocimiento de que un menor de 14 años nos ha facilitado datos personales, te rogamos que nos lo comuniques en privacidad@myrankee.com para proceder a su eliminación.
               </P>
             </Section>
 
@@ -277,7 +282,7 @@ export default function PrivacyPage() {
               </P>
               <div className="p-4 rounded-xl border border-[#1A1A1A] bg-[#111111]">
                 <p className="text-white text-sm font-semibold">MyRankee — Privacidad</p>
-                <p className="text-[#71717A] text-sm mt-1">myrankee@gmail.com</p>
+                <p className="text-[#71717A] text-sm mt-1">privacidad@myrankee.com</p>
               </div>
               <P>
                 Nos comprometemos a responder en un plazo máximo de 30 días.

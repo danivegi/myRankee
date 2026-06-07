@@ -56,7 +56,7 @@ export default function TermsPage() {
           <h1 className={`${anton.className} text-white text-4xl md:text-5xl leading-none`}>
             Términos de Servicio
           </h1>
-          <p className="text-[#71717A] text-sm">Última actualización: 29 de mayo de 2026</p>
+          <p className="text-[#71717A] text-sm">Última actualización: 7 de junio de 2026</p>
         </div>
 
         <div className="flex gap-12">
