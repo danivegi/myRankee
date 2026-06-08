@@ -165,9 +165,11 @@ function StarRating({ value, size = 16 }) {
 // ── Interactive star picker ───────────────────────────────────────────────────
 
 function StarPicker({ value, onChange }) {
+  const [selected,    setSelected]    = useState(value);
   const [hover,       setHover]       = useState(null);
   const [poppedStar,  setPoppedStar]  = useState(null);
-  const display = hover ?? value;
+  // display = hover preview while mousing over stars, otherwise the confirmed selection
+  const display = hover ?? selected;
 
   function handleMouseMove(e, star) {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -179,6 +181,8 @@ function StarPicker({ value, onChange }) {
     const rect = e.currentTarget.getBoundingClientRect();
     const half = e.clientX - rect.left < rect.width / 2;
     const val = half ? star - 0.5 : star;
+    setSelected(val);
+    setHover(null);
     onChange(val);
     setPoppedStar(val);
     setTimeout(() => setPoppedStar(null), 300);
