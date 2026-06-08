@@ -14,9 +14,13 @@ export async function ensureAuthTables() {
         user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
         token      VARCHAR(255) UNIQUE NOT NULL,
         expires_at TIMESTAMP NOT NULL,
+        used       BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await pool.query(
+      `ALTER TABLE email_verifications ADD COLUMN IF NOT EXISTS used BOOLEAN NOT NULL DEFAULT false`
+    );
     await pool.query(`
       CREATE TABLE IF NOT EXISTS password_resets (
         id         SERIAL PRIMARY KEY,

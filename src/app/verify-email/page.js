@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Anton, Inter } from 'next/font/google';
 import Link from 'next/link';
@@ -13,8 +13,13 @@ export default function VerifyEmailPage() {
   const router       = useRouter();
   const [status,   setStatus]   = useState('loading'); // 'loading' | 'success' | 'error'
   const [errorMsg, setErrorMsg] = useState('');
+  const hasFetched = useRef(false);
 
   useEffect(() => {
+    // Guard: refs survive Strict Mode's unmount/remount cycle, so this fires at most once.
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
     const token = searchParams.get('token');
     if (!token) {
       setErrorMsg('No se encontró el token de verificación.');
