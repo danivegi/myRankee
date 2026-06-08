@@ -1,6 +1,6 @@
 import pool from '@/lib/db';
 
-export async function GET(request, { params }) {
+export async function GET(_request, { params }) {
   const { id } = await params;
 
   const result = await pool.query(
@@ -28,6 +28,6 @@ export async function GET(request, { params }) {
     total_reviews: parseInt(reviews.rows[0].total_reviews),
     total_backlog: parseInt(backlog.rows[0].total_backlog),
   }, {
-    headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' },
+    headers: { 'Cache-Control': 'no-store' },
   });
 }
