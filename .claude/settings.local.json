@@ -15,7 +15,8 @@
       "Bash(node -e \"const src = require\\('fs'\\).readFileSync\\('./node_modules/@vercel/analytics/dist/next/index.mjs', 'utf8'\\); console.log\\(src.slice\\(2000, 5000\\)\\);\")",
       "Bash(node -e \"const src = require\\('fs'\\).readFileSync\\('./node_modules/@vercel/analytics/dist/next/index.mjs', 'utf8'\\); const idx = src.indexOf\\('beforeSend'\\); console.log\\(src.slice\\(5000, 7000\\)\\);\")",
       "Bash(npx tsc *)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(node -e \"const src = require\\('fs'\\).readFileSync\\('./node_modules/@vercel/analytics/dist/next/index.mjs', 'utf8'\\); console.log\\(src.slice\\(5800\\)\\);\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\Dani_\\OneDrive\\Escritorio\\MyRankee\\myrankee_proyect\\src\\app\\api\\reviews\\[id]",

@@ -1,6 +1,6 @@
 'use client';
 
-import { Analytics } from '@vercel/analytics/next';
+import { Analytics } from '@vercel/analytics/react';
 
 // Redact personal data from analytics events before they are sent.
 // /user/<username>  →  /user/[username]   (but keep /user/edit as-is)
