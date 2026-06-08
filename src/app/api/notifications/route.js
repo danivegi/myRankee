@@ -22,9 +22,11 @@ export async function GET(request) {
   const res = await pool.query(
     `SELECT n.id, n.type, n.read, n.entity_id, n.entity_name, n.created_at,
             u.username AS from_username, u.nombre AS from_nombre,
-            u.apellido AS from_apellido, u.avatar_url AS from_avatar
+            u.apellido AS from_apellido, u.avatar_url AS from_avatar,
+            a.code AS achievement_code
      FROM notifications n
      LEFT JOIN users u ON u.id = n.from_user_id
+     LEFT JOIN achievements a ON a.id = n.entity_id AND n.type = 'achievement'
      WHERE n.user_id = $1
      ORDER BY n.created_at DESC
      LIMIT 50`,
@@ -56,6 +58,7 @@ export async function GET(request) {
     entity_id: row.entity_id,
     entity_name: row.entity_name
       ?? ((row.type === 'like' || row.type === 'comment') && row.entity_id ? (gameNames[row.entity_id] ?? null) : null),
+    achievement_code: row.achievement_code ?? null,
     created_at: row.created_at,
     from_user: row.from_username
       ? { username: row.from_username, nombre: row.from_nombre, apellido: row.from_apellido, avatar_url: row.from_avatar }

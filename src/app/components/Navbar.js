@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Avatar from '@/app/components/Avatar';
 import { parseDbDate } from '@/lib/dateUtils';
+import { getAchievementImage } from '@/lib/achievement-images';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
@@ -415,7 +416,7 @@ export default function Navbar() {
                       </div>
                     ) : (
                       notifications.map((n) => {
-                        const SYSTEM_TYPES = new Set(['warning', 'content_deleted', 'suspended', 'report_reviewed']);
+                        const SYSTEM_TYPES = new Set(['warning', 'content_deleted', 'suspended', 'report_reviewed', 'achievement']);
                         const isSystem = SYSTEM_TYPES.has(n.type);
 
                         const href = n.type === 'follow'
@@ -446,6 +447,8 @@ export default function Navbar() {
                           ? { color: '#EF4444', path: <><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></> }
                           : n.type === 'report_reviewed'
                           ? { color: '#22C55E', path: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></> }
+                          : n.type === 'achievement'
+                          ? { color: '#F59E0B', path: <><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></> }
                           : null;
 
                         return (
@@ -465,12 +468,22 @@ export default function Navbar() {
                             {/* Avatar or system icon */}
                             {isSystem && systemIcon ? (
                               <div
-                                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 overflow-hidden"
                                 style={{ backgroundColor: `${systemIcon.color}18`, border: `1px solid ${systemIcon.color}40` }}
                               >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={systemIcon.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  {systemIcon.path}
-                                </svg>
+                                {n.type === 'achievement' ? (
+                                  <Image
+                                    src={getAchievementImage(n.achievement_code)}
+                                    alt={n.entity_name ?? 'Logro'}
+                                    width={32}
+                                    height={32}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={systemIcon.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    {systemIcon.path}
+                                  </svg>
+                                )}
                               </div>
                             ) : (
                               <Avatar user={n.from_user ?? {}} size={32} className="mt-0.5" />
@@ -478,9 +491,10 @@ export default function Navbar() {
 
                             <div className="flex-1 min-w-0">
                               {isSystem ? (
-                                // System notifications: show entity_name as the full message
                                 <p className="text-sm text-[#E0E0E0] leading-snug">
-                                  {n.entity_name ?? 'Notificación del sistema'}
+                                  {n.type === 'achievement'
+                                    ? <>¡Logro desbloqueado! <span className="font-semibold text-white">{n.entity_name}</span></>
+                                    : (n.entity_name ?? 'Notificación del sistema')}
                                 </p>
                               ) : (
                                 <p className="text-sm text-[#E0E0E0] leading-snug">
