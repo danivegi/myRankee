@@ -159,19 +159,39 @@ export async function GET(request) {
     });
   }
 
-  // ── CASE B: text search (name substring filter) ──────────────────────────
-  // Now uses `where name ~ *"..."*` — a plain where clause that the
-  // /games/count endpoint supports, so we can get the exact total.
+  // ── CASE B: text search ───────────────────────────────────────────────────
+  // Primary:   name ~ *"..."*  — case-insensitive substring; supports sort,
+  //            offset, and games/count (used for pagination + total).
+  // Secondary: search "..."   — IGDB full-text index; normalises punctuation
+  //            so "repo" matches "R.E.P.O.", but has no offset/count support.
+  //            Only run on page 1 (punctuation matches will appear there first).
+  // Results are merged server-side, deduplicated by id, native-search first.
   if (hasText) {
-    const safeQ    = q.replace(/[*"\\]/g, '');  // strip wildcards and quotes to keep query valid
+    const safeQ    = q.replace(/[*"\\]/g, '');
     const whereStr = [`name ~ *"${safeQ}"*`, ...baseClauses].join(' & ');
 
-    const [resultsRes, countRes] = await Promise.allSettled([
+    const nativeQuery = page === 1
+      ? queryIGDB('games', `search "${safeQ}"; ${FIELDS}; where ${baseClauses.join(' & ')}; limit ${PAGE_SIZE};`)
+      : Promise.resolve(null);
+
+    const [resultsRes, countRes, searchRes] = await Promise.allSettled([
       queryIGDB('games',       `${FIELDS}; where ${whereStr}; sort ${igdbSort}; limit ${PAGE_SIZE}; offset ${offset};`),
       queryIGDB('games/count', `where ${whereStr};`),
+      nativeQuery,
     ]);
 
-    let games = (resultsRes.status === 'fulfilled' ? resultsRes.value ?? [] : []).map(mapGame);
+    const substringGames = resultsRes.status === 'fulfilled' ? (resultsRes.value ?? []) : [];
+    const nativeGames    = searchRes.status   === 'fulfilled' ? (searchRes.value   ?? []) : [];
+
+    // Native-search results first (full-name/punctuation matches), then any
+    // substring-only results not already covered; deduplicate by id.
+    const seen   = new Set();
+    const merged = [];
+    for (const g of [...nativeGames, ...substringGames]) {
+      if (!seen.has(g.id)) { seen.add(g.id); merged.push(g); }
+    }
+
+    let games = merged.map(mapGame);
 
     if (hasBacklogFilter) {
       const userId = getUserId();
