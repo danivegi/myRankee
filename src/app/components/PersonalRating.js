@@ -36,6 +36,14 @@ export default function PersonalRating({ gameId }) {
       .catch(() => setScore(null));
   }, [gameId]);
 
+  useEffect(() => {
+    function onRatingUpdated(e) {
+      if (String(e.detail.gameId) === String(gameId)) setScore(e.detail.score);
+    }
+    window.addEventListener('personal-rating-updated', onRatingUpdated);
+    return () => window.removeEventListener('personal-rating-updated', onRatingUpdated);
+  }, [gameId]);
+
   // Not logged in, or still loading — render nothing so layout doesn't jump on SSR
   if (!loggedIn || score === undefined) return null;
 

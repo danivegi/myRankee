@@ -387,7 +387,7 @@ function RatingModal({ gameId, onClose, onSubmit, onAchievementsUnlocked, initia
       // Fire achievements BEFORE closing — onAchievementsUnlocked runs in GameInteractions
       // which stays mounted, avoiding any stale-closure/unmount timing issue.
       onAchievementsUnlocked(allAchievements);
-      onSubmit();
+      onSubmit(score);
       onClose();
     } catch {
       setError('Error al guardar. Inténtalo de nuevo.');
@@ -724,7 +724,9 @@ export default function GameInteractions({ gameId, gameData }) {
     requireAuth(() => setModalOpen(true));
   }
 
-  function handleSubmitted() {
+  function handleSubmitted(submittedScore) {
+    setMyScore(submittedScore);
+    window.dispatchEvent(new CustomEvent('personal-rating-updated', { detail: { gameId, score: submittedScore } }));
     loadStats();
     loadReviews();
   }
