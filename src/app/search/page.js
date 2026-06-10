@@ -83,6 +83,69 @@ const BACKLOG_OPTIONS = [
 
 const SORT_OPTIONS = ['Relevancia', 'Puntuación', 'Recientes', 'Nombre'];
 
+// ── Platform display helpers ──────────────────────────────────────────────────
+
+// Lower number = shown first. Intentionally ordered most-recent-first within each family.
+const PLATFORM_PRIORITY = {
+  'PC':               0,
+  'PlayStation 5':    10, 'PlayStation 4':    11, 'PlayStation 3': 12,
+  'PlayStation 2':    13, 'PlayStation':      14, 'PS Vita':       15, 'PSP': 16,
+  'Xbox Series X|S':  20, 'Xbox One':         21, 'Xbox 360':      22, 'Xbox': 23,
+  'Nintendo Switch':  30, 'Wii U':            31, 'Wii':           32,
+  'GameCube':         33, 'Nintendo 64':      34, 'SNES':          35, 'NES': 36,
+  'Nintendo 3DS':     37, 'Nintendo DS':      38,
+  'Game Boy Advance': 39, 'Game Boy Color':   40, 'Game Boy':      41,
+  'Dreamcast':        50, 'Saturn':           51,
+  'Mega Drive':       52, 'Mega Drive/Genesis': 53,
+  'Android':          60, 'iOS':              61,
+};
+
+const PLATFORM_FAMILY = {
+  'PC':               'pc',
+  'PlayStation 5':    'ps', 'PlayStation 4':    'ps', 'PlayStation 3': 'ps',
+  'PlayStation 2':    'ps', 'PlayStation':      'ps', 'PS Vita':       'ps', 'PSP': 'ps',
+  'Xbox Series X|S':  'xbox', 'Xbox One':       'xbox', 'Xbox 360':    'xbox', 'Xbox': 'xbox',
+  'Nintendo Switch':  'nintendo', 'Wii U':       'nintendo', 'Wii':         'nintendo',
+  'GameCube':         'nintendo', 'Nintendo 64': 'nintendo', 'SNES':        'nintendo', 'NES': 'nintendo',
+  'Nintendo 3DS':     'nintendo', 'Nintendo DS': 'nintendo',
+  'Game Boy Advance': 'nintendo', 'Game Boy Color': 'nintendo', 'Game Boy':  'nintendo',
+  'Dreamcast':        'sega',     'Saturn':      'sega', 'Mega Drive':  'sega', 'Mega Drive/Genesis': 'sega',
+  'Android':          'mobile',   'iOS':         'mobile',
+};
+
+const PLATFORM_COLOR = {
+  'PlayStation 5':    '#0070D1', 'PlayStation 4':    '#0070D1', 'PlayStation 3': '#0070D1',
+  'PlayStation 2':    '#0070D1', 'PlayStation':      '#0070D1', 'PS Vita':       '#0070D1', 'PSP': '#0070D1',
+  'Xbox Series X|S':  '#107C10', 'Xbox One':         '#107C10', 'Xbox 360':      '#107C10', 'Xbox': '#107C10',
+  'Nintendo Switch':  '#E60012', 'Wii U':            '#E60012', 'Wii':           '#E60012',
+  'GameCube':         '#E60012', 'Nintendo 64':      '#E60012', 'SNES':          '#E60012', 'NES': '#E60012',
+  'Nintendo 3DS':     '#A60010', 'Nintendo DS':      '#A60010',
+  'Game Boy Advance': '#A60010', 'Game Boy Color':   '#A60010', 'Game Boy':      '#A60010',
+  'PC':               '#6E7B8B',
+  'Dreamcast':        '#0089CF', 'Saturn':           '#0089CF',
+  'Mega Drive':       '#0089CF', 'Mega Drive/Genesis': '#0089CF',
+  'Android':          '#3DDC84', 'iOS':              '#3DDC84',
+};
+
+// Returns up to 3 platforms: sorted by priority, one per family (best of each).
+function getTopPlatforms(platforms) {
+  if (!platforms?.length) return [];
+  const sorted = [...platforms].sort(
+    (a, b) => (PLATFORM_PRIORITY[a] ?? 99) - (PLATFORM_PRIORITY[b] ?? 99)
+  );
+  const seenFamilies = new Set();
+  const result = [];
+  for (const p of sorted) {
+    const family = PLATFORM_FAMILY[p] ?? p;
+    if (!seenFamilies.has(family)) {
+      seenFamilies.add(family);
+      result.push(p);
+      if (result.length === 3) break;
+    }
+  }
+  return result;
+}
+
 // ── Avatar helper ─────────────────────────────────────────────────────────────
 
 
@@ -334,6 +397,9 @@ function CompanySearch({ selectedCompanies, onAdd, onRemove }) {
 }
 
 function GameCard({ game, index }) {
+  const topPlatforms = getTopPlatforms(game.platforms);
+  const extraCount   = game.platforms.length - 3;
+
   return (
     <Link
       href={`/game/${game.id}`}
@@ -356,10 +422,21 @@ function GameCard({ game, index }) {
           {game.year && <span className="text-[#71717A] font-mono text-[11px]">{game.year}</span>}
         </div>
       </div>
-      {game.platforms[0] && (
-        <span className="text-[#71717A] font-mono text-[11px] flex-shrink-0 hidden sm:block">
-          {game.platforms[0]}
-        </span>
+      {topPlatforms.length > 0 && (
+        <div className="hidden sm:flex flex-col items-end gap-0.5 flex-shrink-0">
+          {topPlatforms.map((p) => (
+            <span
+              key={p}
+              className="font-mono text-[11px] leading-tight whitespace-nowrap"
+              style={{ color: PLATFORM_COLOR[p] ?? '#71717A' }}
+            >
+              {p}
+            </span>
+          ))}
+          {extraCount > 0 && (
+            <span className="font-mono text-[10px] text-[#52525B] leading-tight">+{extraCount}</span>
+          )}
+        </div>
       )}
     </Link>
   );
