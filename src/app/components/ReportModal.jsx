@@ -58,7 +58,7 @@ export default function ReportModal({ targetType, targetId, onClose }) {
       style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-md rounded-2xl border border-[#1A1A1A] bg-[#111111] p-6 flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+      <div className="w-full max-w-md rounded-2xl border border-[#1A1A1A] bg-[#111111] p-6 flex flex-col gap-5 max-h-[calc(90vh_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom))] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="text-white font-semibold text-base">Reportar contenido</h2>
           <button onClick={onClose} className="text-[#71717A] hover:text-white transition-colors" aria-label="Cerrar">

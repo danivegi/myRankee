@@ -47,15 +47,26 @@ export const metadata = {
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
     ],
     shortcut: '/favicon.ico',
-    apple:    '/apple-touch-icon.png',
+    apple:    { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
   },
-  manifest: '/site.webmanifest',
+  // Manifest link is injected automatically from src/app/manifest.js
+  appleWebApp: {
+    capable: true,
+    title: 'myRankee',
+    // Content draws under the status bar; body pads it with env(safe-area-inset-top) in globals.css
+    statusBarStyle: 'black-translucent',
+  },
+  other: {
+    // Next only emits mobile-web-app-capable; older iOS needs the prefixed tag to open standalone
+    'apple-mobile-web-app-capable': 'yes',
+  },
 };
 
 export const viewport = {
-  themeColor: '#A855F7',
+  themeColor: '#0A0A0A',
   width: 'device-width',
   initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }) {

@@ -255,7 +255,8 @@ export function ToastProvider({ children }) {
 
       {/* Toast stack */}
       <div
-        className="fixed bottom-6 right-6 flex flex-col gap-2 z-[9999] pointer-events-none"
+        className="fixed flex flex-col gap-2 z-[9999] pointer-events-none"
+        style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom))', right: 'calc(1.5rem + env(safe-area-inset-right))' }}
         aria-live="polite"
       >
         {toasts.map((t) => (

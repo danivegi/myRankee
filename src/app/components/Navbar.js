@@ -98,8 +98,8 @@ function SearchBox({ onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-16"
-      style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+      className="fixed inset-0 z-50 flex items-start justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', paddingTop: 'calc(4rem + env(safe-area-inset-top))' }}
       onClick={onClose}
     >
       <div className="w-full max-w-2xl mx-4" onClick={(e) => e.stopPropagation()}>

@@ -321,7 +321,7 @@ function BannerPickerModal({ onSelect, onClose }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl max-h-[90vh] rounded-2xl border border-[#1A1A1A] bg-[#111111] flex flex-col overflow-hidden"
+        className="w-full max-w-2xl max-h-[calc(90vh_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom))] rounded-2xl border border-[#1A1A1A] bg-[#111111] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

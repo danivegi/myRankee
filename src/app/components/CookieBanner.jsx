@@ -27,7 +27,14 @@ export default function CookieBanner() {
       className="fixed bottom-0 left-0 right-0 z-[9998] transition-transform duration-300 ease-out"
       style={{ transform: mounted ? 'translateY(0)' : 'translateY(100%)' }}
     >
-      <div className="border-t border-[#1A1A1A] bg-[#111111] px-6 py-4">
+      <div
+        className="border-t border-[#1A1A1A] bg-[#111111] px-6 pt-4"
+        style={{
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
+          paddingLeft:   'max(1.5rem, env(safe-area-inset-left))',
+          paddingRight:  'max(1.5rem, env(safe-area-inset-right))',
+        }}
+      >
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="flex items-start gap-3 flex-1">
             <svg className="flex-shrink-0 mt-0.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A855F7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
