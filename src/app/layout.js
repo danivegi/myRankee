@@ -47,7 +47,7 @@ export const metadata = {
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
     ],
     shortcut: '/favicon.ico',
-    apple:    { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    apple:    { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
   },
   // Manifest link is injected automatically from src/app/manifest.js
   appleWebApp: {
