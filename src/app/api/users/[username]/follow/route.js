@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 import { ensureFollowsTable } from '@/lib/init-follows';
 import { createNotification } from '@/lib/init-notifications';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
-import { checkRateLimit, getIp, rateLimitResponse, LIMITS } from '@/lib/rate-limit';
+import { checkRateLimit, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
 
 function authPayload(request) {
   const h = request.headers.get('authorization');
@@ -34,8 +34,7 @@ export async function POST(request, { params }) {
   const payload = authPayload(request);
   if (!payload) return Response.json({ error: 'No autenticado' }, { status: 401 });
 
-  const ip = getIp(request);
-  const rl = checkRateLimit(`write:${ip}`, LIMITS.write.limit, LIMITS.write.windowMs);
+  const rl = checkRateLimit(writeLimitKey(request, payload), LIMITS.write.limit, LIMITS.write.windowMs);
   if (!rl.success) return rateLimitResponse(rl.retryAfter);
 
   try {

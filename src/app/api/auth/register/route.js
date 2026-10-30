@@ -52,7 +52,7 @@ export async function POST(request) {
       `SELECT COUNT(*) FROM registration_attempts WHERE ip_address = $1 AND created_at > $2`,
       [ip, windowStart]
     );
-    if (parseInt(attemptsRes.rows[0].count) >= 5) {
+    if (parseInt(attemptsRes.rows[0].count) >= 20) {
       logSecurityEvent({ eventType: 'registration_spam', ip });
       return Response.json({ error: 'Demasiados intentos de registro. Espera una hora.' }, { status: 429 });
     }
@@ -131,11 +131,18 @@ export async function POST(request) {
       console.error('[register] sendVerificationEmail failed:', e.message)
     );
 
-    // Mark attempt as successful
+    // Mark the latest attempt for this IP + email as successful
+    // (PostgreSQL has no UPDATE … ORDER BY/LIMIT, so pick the row in a subquery)
     await pool.query(
-      `UPDATE registration_attempts SET successful = true WHERE ip_address = $1 AND email = $2 ORDER BY created_at DESC LIMIT 1`,
+      `UPDATE registration_attempts SET successful = true
+       WHERE id = (
+         SELECT id FROM registration_attempts
+         WHERE ip_address = $1 AND email = $2
+         ORDER BY created_at DESC
+         LIMIT 1
+       )`,
       [ip, email]
-    ).catch(() => {});
+    ).catch((e) => console.error('[register] Could not mark registration attempt as successful:', e.message));
 
     logSecurityEvent({
       userId: user.id,

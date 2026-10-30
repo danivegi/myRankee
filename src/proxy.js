@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MOBILE_CLIENT_HEADER } from '@/lib/client-header';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -25,7 +26,13 @@ export function proxy(request) {
 
   const origin = request.headers.get('origin');
 
-  if (!origin || !ALLOWED_ORIGINS.has(origin)) {
+  // Browsers always send Origin on non-GET requests: it must be one of ours.
+  // No Origin means a non-browser client: only the native app is let through.
+  const allowed = origin
+    ? ALLOWED_ORIGINS.has(origin)
+    : request.headers.get(MOBILE_CLIENT_HEADER.name) === MOBILE_CLIENT_HEADER.value;
+
+  if (!allowed) {
     return NextResponse.json(
       { error: 'Solicitud no permitida' },
       { status: 403 }

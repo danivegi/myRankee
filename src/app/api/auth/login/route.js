@@ -25,33 +25,49 @@ export async function POST(request) {
 
   const { identifier, password, captcha_token } = data;
   const isEmail = EMAIL_RE.test(identifier);
+  // login_attempts.email stores this normalized identifier (email or username)
+  const logIdentifier = identifier.toLowerCase();
 
   const window = new Date(Date.now() - 15 * 60 * 1000);
 
   await pool.query(`DELETE FROM login_attempts WHERE attempted_at < $1`, [window]);
 
-  const [byIdentifier, byIp] = await Promise.all([
+  // Lockout is keyed by identifier + IP, so many users behind one mobile-carrier
+  // IP don't lock each other out. The IP-only count is a high safety net.
+  // The identifier-only count (any IP) never locks — it only forces captcha,
+  // to slow down attacks on one account spread across many IPs.
+  const [byPair, byIp, byIdentifier] = await Promise.all([
     pool.query(
-      `SELECT COUNT(*) FROM login_attempts WHERE email = $1 AND successful = false AND attempted_at > $2`,
-      [identifier.toLowerCase(), window]
+      `SELECT COUNT(*) FROM login_attempts
+       WHERE email = $1 AND ip_address = $2 AND successful = false AND attempted_at > $3`,
+      [logIdentifier, ip, window]
     ),
     pool.query(
       `SELECT COUNT(*) FROM login_attempts WHERE ip_address = $1 AND successful = false AND attempted_at > $2`,
       [ip, window]
     ),
+    pool.query(
+      `SELECT COUNT(*) FROM login_attempts WHERE email = $1 AND successful = false AND attempted_at > $2`,
+      [logIdentifier, window]
+    ),
   ]);
 
-  const identifierFailures = parseInt(byIdentifier.rows[0].count);
+  const pairFailures       = parseInt(byPair.rows[0].count);
   const ipFailures         = parseInt(byIp.rows[0].count);
+  const identifierFailures = parseInt(byIdentifier.rows[0].count);
 
-  if (identifierFailures >= 5) {
-    logSecurityEvent({ eventType: 'login_blocked_email', ip, metadata: { identifier } });
+  const PAIR_CAPTCHA_AFTER       = 2; // failures for this identifier from this IP
+  const IDENTIFIER_CAPTCHA_AFTER = 5; // failures for this identifier from any IP
+  const needsCaptcha = (pair, any) => pair >= PAIR_CAPTCHA_AFTER || any >= IDENTIFIER_CAPTCHA_AFTER;
+
+  if (pairFailures >= 10) {
+    logSecurityEvent({ eventType: 'login_blocked_identifier_ip', ip, metadata: { identifier } });
     return Response.json(
       { error: 'Demasiados intentos fallidos. Espera 15 minutos antes de intentarlo de nuevo.' },
       { status: 429 }
     );
   }
-  if (ipFailures >= 10) {
+  if (ipFailures >= 100) {
     logSecurityEvent({ eventType: 'login_blocked_ip', ip, metadata: { identifier } });
     return Response.json(
       { error: 'Demasiados intentos desde esta dirección. Espera 15 minutos.' },
@@ -59,8 +75,9 @@ export async function POST(request) {
     );
   }
 
-  // Require captcha after 2 failed attempts
-  if (identifierFailures >= 2) {
+  // Require captcha after 2 failures for this identifier + IP,
+  // or after 5 failures for this identifier from any IP
+  if (needsCaptcha(pairFailures, identifierFailures)) {
     const captchaOk = await verifyCaptcha(captcha_token);
     if (!captchaOk) {
       return Response.json(
@@ -76,10 +93,8 @@ export async function POST(request) {
             email_verified, is_suspended, suspended_reason
      FROM users
      WHERE ${isEmail ? 'LOWER(email) = $1' : 'LOWER(username) = $1'}`,
-    [identifier.toLowerCase()]
+    [logIdentifier]
   );
-
-  const logIdentifier = identifier.toLowerCase();
 
   if (result.rows.length === 0) {
     await pool.query(
@@ -99,9 +114,9 @@ export async function POST(request) {
       [logIdentifier, ip]
     );
     logSecurityEvent({ eventType: 'login_failure', ip, metadata: { identifier: logIdentifier, reason: 'wrong_password' } });
-    const failCount = identifierFailures + 1;
+    // Counting this failure, will the next attempt need captcha?
     return Response.json(
-      { error: 'Credenciales incorrectas', requires_captcha: failCount >= 2 },
+      { error: 'Credenciales incorrectas', requires_captcha: needsCaptcha(pairFailures + 1, identifierFailures + 1) },
       { status: 401 }
     );
   }

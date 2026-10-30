@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 import { ensureCommentsTables } from '@/lib/comments';
 import { createNotification } from '@/lib/init-notifications';
-import { checkRateLimit, getIp, rateLimitResponse, LIMITS } from '@/lib/rate-limit';
+import { checkRateLimit, getIp, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
 import { validate, commentSchema, validationErrorResponse } from '@/lib/validation';
 import { sanitizeText } from '@/lib/sanitize';
 
@@ -42,8 +42,7 @@ export async function POST(request, { params }) {
   const user = getUser(request);
   if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
 
-  const ip = getIp(request);
-  const rl = checkRateLimit(`write:${ip}`, LIMITS.write.limit, LIMITS.write.windowMs);
+  const rl = checkRateLimit(writeLimitKey(request, user), LIMITS.write.limit, LIMITS.write.windowMs);
   if (!rl.success) return rateLimitResponse(rl.retryAfter);
 
   const { id: reviewId } = await params;

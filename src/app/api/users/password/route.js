@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
 import { checkPassword } from '@/lib/password';
 import { logSecurityEvent } from '@/lib/init-auth';
-import { checkRateLimit, getIp, rateLimitResponse, LIMITS } from '@/lib/rate-limit';
+import { checkRateLimit, getIp, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
 
 function getUser(request) {
   const auth = request.headers.get('authorization');
@@ -20,7 +20,7 @@ export async function PUT(request) {
   if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
 
   const ip = getIp(request);
-  const rl = checkRateLimit(`write:${ip}`, LIMITS.write.limit, LIMITS.write.windowMs);
+  const rl = checkRateLimit(writeLimitKey(request, user), LIMITS.write.limit, LIMITS.write.windowMs);
   if (!rl.success) return rateLimitResponse(rl.retryAfter);
 
   const { current_password, new_password } = await request.json();

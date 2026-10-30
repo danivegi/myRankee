@@ -50,6 +50,13 @@ export function getIp(request) {
   );
 }
 
+// Write-limit key: per user for authenticated requests, so users sharing a
+// mobile-carrier IP don't throttle each other; per IP otherwise.
+// `user` must come from a verified JWT, never from an unverified decode.
+export function writeLimitKey(request, user) {
+  return user?.id != null ? `write:user:${user.id}` : `write:${getIp(request)}`;
+}
+
 export function rateLimitResponse(retryAfter) {
   return Response.json(
     { error: `Has excedido el límite de peticiones. Inténtalo de nuevo en ${retryAfter} segundos.` },
