@@ -63,22 +63,26 @@ export async function POST(request, { params }) {
       );
       following = false;
     } else {
-      await pool.query(
-        'INSERT INTO follows (follower_id, followed_id) VALUES ($1, $2)',
+      // UNIQUE (follower_id, followed_id): if a concurrent request already followed, it's already done.
+      const insertRes = await pool.query(
+        'INSERT INTO follows (follower_id, followed_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
         [followerId, followedId]
       );
       following = true;
-      try {
-        await pool.query(
-          `INSERT INTO activity (user_id, igdb_game_id, type, metadata)
-           VALUES ($1, NULL, 'follow', $2)`,
-          [followerId, JSON.stringify({ follower_username: payload.username ?? '', followed_username: username })]
-        );
-      } catch { /* igdb_game_id may be NOT NULL — non-fatal */ }
-      try {
-        await createNotification({ userId: followedId, fromUserId: followerId, type: 'follow' });
-      } catch { /* non-fatal */ }
-      checkAndUnlockAchievements(followedId).catch(() => {});
+      // Activity, notification and achievements only for the request that actually created the follow.
+      if (insertRes.rowCount > 0) {
+        try {
+          await pool.query(
+            `INSERT INTO activity (user_id, igdb_game_id, type, metadata)
+             VALUES ($1, NULL, 'follow', $2)`,
+            [followerId, JSON.stringify({ follower_username: payload.username ?? '', followed_username: username })]
+          );
+        } catch { /* igdb_game_id may be NOT NULL — non-fatal */ }
+        try {
+          await createNotification({ userId: followedId, fromUserId: followerId, type: 'follow' });
+        } catch { /* non-fatal */ }
+        checkAndUnlockAchievements(followedId).catch(() => {});
+      }
     }
 
     const countRes = await pool.query(

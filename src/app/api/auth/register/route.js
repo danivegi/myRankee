@@ -24,6 +24,22 @@ const BANNED_USERNAMES = new Set([
   'bot','spam','test','abuse','security','api','www','mail',
 ]);
 
+// Case-insensitive, like login (LOWER(email) / LOWER(username)) and the unique indexes on users.
+async function findTakenField(email, username) {
+  const existing = await pool.query(
+    'SELECT email FROM users WHERE lower(email) = lower($1) OR lower(username) = lower($2) LIMIT 1',
+    [email, username]
+  );
+  if (!existing.rows.length) return null;
+  return existing.rows[0].email?.toLowerCase() === email.toLowerCase()
+    ? 'El correo electrónico'
+    : 'El nombre de usuario';
+}
+
+function alreadyInUse(field) {
+  return Response.json({ error: `${field} ya está en uso` }, { status: 409 });
+}
+
 export async function POST(request) {
   try {
     await ensureAuthTables();
@@ -94,28 +110,29 @@ export async function POST(request) {
       [ip, email]
     ).catch(() => {});
 
-    const existing = await pool.query(
-      'SELECT id, email, username FROM users WHERE email = $1 OR username = $2',
-      [email, username]
-    );
-
-    if (existing.rows.length > 0) {
-      const taken = existing.rows[0];
-      const field = taken.email === email ? 'El correo electrónico' : 'El nombre de usuario';
-      return Response.json({ error: `${field} ya está en uso` }, { status: 409 });
-    }
+    const taken = await findTakenField(email, username);
+    if (taken) return alreadyInUse(taken);
 
     const password_hash = await bcrypt.hash(password, 10);
 
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS age_confirmed BOOLEAN NOT NULL DEFAULT false`);
 
-    const dbResult = await pool.query(
-      `INSERT INTO users (nombre, apellido, username, email, password_hash, email_verified, terms_accepted_at, age_confirmed)
-       VALUES ($1, $2, $3, $4, $5, false, NOW(), $6)
-       RETURNING id, username, email`,
-      [nombre, apellido, username, email, password_hash, age_confirmed === true]
-    );
+    let dbResult;
+    try {
+      dbResult = await pool.query(
+        `INSERT INTO users (nombre, apellido, username, email, password_hash, email_verified, terms_accepted_at, age_confirmed)
+         VALUES ($1, $2, $3, $4, $5, false, NOW(), $6)
+         RETURNING id, username, email`,
+        [nombre, apellido, username, email, password_hash, age_confirmed === true]
+      );
+    } catch (err) {
+      // Unique indexes on lower(email) / lower(username): a simultaneous signup won the race.
+      if (err.code === '23505') {
+        return alreadyInUse((await findTakenField(email, username)) ?? 'El correo electrónico o el nombre de usuario');
+      }
+      throw err;
+    }
 
     const user = dbResult.rows[0];
 

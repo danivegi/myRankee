@@ -67,33 +67,25 @@ export async function POST(request) {
   const { igdb_game_id, content } = data;
   const safeContent = sanitizeText(content);
 
-  const existing = await pool.query(
-    'SELECT id FROM reviews WHERE user_id = $1 AND igdb_game_id = $2',
-    [user.id, igdb_game_id]
+  // Atomic upsert on UNIQUE (user_id, igdb_game_id): one review per user and game, even with
+  // simultaneous requests. (xmax = 0) is true only for a freshly inserted row.
+  const upserted = await pool.query(
+    `INSERT INTO reviews (user_id, igdb_game_id, content)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (user_id, igdb_game_id)
+     DO UPDATE SET content = EXCLUDED.content, updated_at = NOW()
+     RETURNING id, content, created_at, (xmax = 0) AS inserted`,
+    [user.id, igdb_game_id, safeContent]
   );
+  const { inserted, ...review } = upserted.rows[0];
 
-  let review;
-  if (existing.rows.length > 0) {
-    const updated = await pool.query(
-      `UPDATE reviews SET content = $1, updated_at = NOW()
-       WHERE id = $2
-       RETURNING id, content, created_at`,
-      [safeContent, existing.rows[0].id]
-    );
-    review = updated.rows[0];
+  if (!inserted) {
     pool.query(
       `UPDATE activity SET metadata = $3::jsonb
        WHERE type = 'review' AND user_id = $1 AND (metadata->>'review_id')::int = $2`,
       [user.id, review.id, JSON.stringify({ content: safeContent, review_id: review.id })]
     ).catch(() => {});
   } else {
-    const inserted = await pool.query(
-      `INSERT INTO reviews (user_id, igdb_game_id, content)
-       VALUES ($1, $2, $3)
-       RETURNING id, content, created_at`,
-      [user.id, igdb_game_id, safeContent]
-    );
-    review = inserted.rows[0];
     pool.query(
       `INSERT INTO activity (user_id, igdb_game_id, type, metadata)
        VALUES ($1, $2, 'review', $3::jsonb)`,

@@ -46,20 +46,24 @@ export async function POST(request, { params }) {
     );
     liked = false;
   } else {
-    await pool.query(
-      'INSERT INTO review_likes (user_id, review_id) VALUES ($1, $2)',
+    // PK (user_id, review_id): if a concurrent request already inserted the like, it's already done.
+    const insertRes = await pool.query(
+      'INSERT INTO review_likes (user_id, review_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
       [user.id, reviewId]
     );
     liked = true;
-    try {
-      await createNotification({
-        userId: review.user_id,
-        fromUserId: user.id,
-        type: 'like',
-        entityId: review.igdb_game_id,
-      });
-    } catch { /* non-fatal */ }
-    checkAndUnlockAchievements(review.user_id).catch(() => {});
+    // Notify / check achievements only for the request that actually created the like.
+    if (insertRes.rowCount > 0) {
+      try {
+        await createNotification({
+          userId: review.user_id,
+          fromUserId: user.id,
+          type: 'like',
+          entityId: review.igdb_game_id,
+        });
+      } catch { /* non-fatal */ }
+      checkAndUnlockAchievements(review.user_id).catch(() => {});
+    }
   }
 
   // Count from review_likes directly — no likes_count column needed
