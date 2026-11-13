@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
-import { createNotification } from '@/lib/init-notifications';
+import { createNotification, deleteToggleNotification } from '@/lib/init-notifications';
 
 function getUser(request) {
   const auth = request.headers.get('authorization');
@@ -38,6 +38,15 @@ export async function POST(request, { params }) {
         'UPDATE lists SET followers_count = GREATEST(0, followers_count - 1) WHERE id = $1',
         [id]
       );
+      // The list follow is gone: so is its notification.
+      try {
+        await deleteToggleNotification({
+          userId: list.user_id,
+          fromUserId: user.id,
+          type: 'list_follow',
+          entityId: list.id,
+        });
+      } catch { /* non-fatal */ }
     }
     return Response.json({ following: false });
   } else {

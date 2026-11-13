@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
-import { createNotification } from '@/lib/init-notifications';
+import { createNotification, deleteToggleNotification } from '@/lib/init-notifications';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
 import { checkRateLimit, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
 
@@ -40,11 +40,22 @@ export async function POST(request, { params }) {
 
   let liked;
   if (existing.rows.length) {
-    await pool.query(
+    const deleteRes = await pool.query(
       'DELETE FROM review_likes WHERE user_id = $1 AND review_id = $2',
       [user.id, reviewId]
     );
     liked = false;
+    // The like is gone: so is its notification (only for the request that actually removed it).
+    if (deleteRes.rowCount > 0) {
+      try {
+        await deleteToggleNotification({
+          userId: review.user_id,
+          fromUserId: user.id,
+          type: 'like',
+          entityId: review.igdb_game_id,
+        });
+      } catch { /* non-fatal */ }
+    }
   } else {
     // PK (user_id, review_id): if a concurrent request already inserted the like, it's already done.
     const insertRes = await pool.query(

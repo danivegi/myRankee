@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 import { ensureFollowsTable } from '@/lib/init-follows';
-import { createNotification } from '@/lib/init-notifications';
+import { createNotification, deleteToggleNotification } from '@/lib/init-notifications';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
 import { checkRateLimit, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
 
@@ -57,11 +57,17 @@ export async function POST(request, { params }) {
 
     let following;
     if (existsRes.rows.length) {
-      await pool.query(
+      const deleteRes = await pool.query(
         'DELETE FROM follows WHERE follower_id = $1 AND followed_id = $2',
         [followerId, followedId]
       );
       following = false;
+      // The follow is gone: so is its notification (only for the request that actually removed it).
+      if (deleteRes.rowCount > 0) {
+        try {
+          await deleteToggleNotification({ userId: followedId, fromUserId: followerId, type: 'follow' });
+        } catch { /* non-fatal */ }
+      }
     } else {
       // UNIQUE (follower_id, followed_id): if a concurrent request already followed, it's already done.
       const insertRes = await pool.query(
