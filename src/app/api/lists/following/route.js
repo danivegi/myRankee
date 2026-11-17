@@ -32,6 +32,7 @@ export async function GET(request) {
      JOIN users u ON l.user_id = u.id
      LEFT JOIN list_games lg ON lg.list_id = l.id
      WHERE lf.user_id = $1
+       AND (l.is_public = true OR l.user_id = $1)
      GROUP BY l.id, u.username, u.nombre, u.apellido, u.avatar_url, lf.created_at
      ORDER BY lf.created_at DESC`,
     [userId]

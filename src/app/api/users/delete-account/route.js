@@ -91,6 +91,7 @@ export async function DELETE(request) {
     // Auth tokens
     await client.query('DELETE FROM email_verifications WHERE user_id = $1', [uid]);
     await client.query('DELETE FROM password_resets    WHERE user_id = $1', [uid]);
+    await client.query('DELETE FROM email_changes      WHERE user_id = $1', [uid]);
     await client.query('DELETE FROM login_attempts     WHERE email = (SELECT email FROM users WHERE id = $1)', [uid]);
 
     // Finally the user

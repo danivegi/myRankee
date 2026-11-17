@@ -24,7 +24,7 @@ export async function GET(request) {
     backlogRes, commentsRes, achievementsRes,
     followersRes, followingRes,
     favGamesRes, favTopRes,
-    socialLinksRes, notifPrefsRes,
+    socialLinksRes, notifPrefsRes, emailChangesRes,
   ] = await Promise.all([
     pool.query(
       `SELECT username, nombre, apellido, email, bio, avatar_url, created_at, terms_accepted_at
@@ -56,6 +56,11 @@ export async function GET(request) {
     pool.query('SELECT igdb_game_id, position FROM favorite_games_top WHERE user_id = $1 ORDER BY position ASC', [uid]),
     pool.query('SELECT platform, url FROM user_social_links WHERE user_id = $1 ORDER BY platform', [uid]),
     pool.query('SELECT preferences FROM user_notification_preferences WHERE user_id = $1', [uid]),
+    // Email change requests (never the token). The table may not exist on an old database: empty then.
+    pool.query(
+      `SELECT new_email, created_at, expires_at, used, used_at FROM email_changes
+       WHERE user_id = $1 ORDER BY created_at DESC`, [uid]
+    ).catch(() => ({ rows: [] })),
   ]);
 
   // Attach games to each list
@@ -86,6 +91,7 @@ export async function GET(request) {
     favorite_games_top: favTopRes.rows,
     social_links: socialLinksRes.rows,
     notification_preferences: notifPrefsRes.rows[0]?.preferences ?? null,
+    email_changes: emailChangesRes.rows,
   };
 
   const username = profileRes.rows[0]?.username ?? uid;

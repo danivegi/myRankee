@@ -12,9 +12,14 @@ function getUser(request) {
 }
 
 async function checkOwner(listId, userId) {
-  const result = await pool.query('SELECT user_id FROM lists WHERE id = $1', [listId]);
+  if (!/^\d+$/.test(String(listId))) return { error: 'Lista no encontrada', status: 404 };
+  const result = await pool.query('SELECT user_id, is_public FROM lists WHERE id = $1', [listId]);
   if (!result.rows.length) return { error: 'Lista no encontrada', status: 404 };
-  if (result.rows[0].user_id !== userId) return { error: 'Sin permisos', status: 403 };
+  const list = result.rows[0];
+  // Someone else's private list: same 404 as a missing one (don't reveal that the id exists).
+  if (list.user_id !== userId) {
+    return list.is_public ? { error: 'Sin permisos', status: 403 } : { error: 'Lista no encontrada', status: 404 };
+  }
   return null;
 }
 

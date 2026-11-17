@@ -5,6 +5,11 @@ import { checkRateLimit, getIp, rateLimitResponse, LIMITS, writeLimitKey } from 
 import { validate, listSchema, validationErrorResponse } from '@/lib/validation';
 import { sanitizeText } from '@/lib/sanitize';
 
+// Private lists are only visible to their owner. Everyone else gets the same 404 as a missing list,
+// so private lists can't be told apart from non-existent ids (ids are sequential).
+const isValidId = (id) => /^\d+$/.test(String(id));
+const canSee = (list, user) => list.is_public || (user != null && Number(user.id) === Number(list.user_id));
+
 function getUser(request) {
   const auth = request.headers.get('authorization');
   if (!auth?.startsWith('Bearer ')) return null;
@@ -23,6 +28,8 @@ export async function GET(request, { params }) {
   if (!rl.success) return rateLimitResponse(rl.retryAfter);
 
   const user = getUser(request);
+
+  if (!isValidId(id)) return Response.json({ error: 'Lista no encontrada' }, { status: 404 });
 
   const result = await pool.query(
     `SELECT l.id, l.title, l.description, l.is_public, l.followers_count,
@@ -44,6 +51,9 @@ export async function GET(request, { params }) {
   }
 
   const list = result.rows[0];
+  if (!canSee(list, user)) {
+    return Response.json({ error: 'Lista no encontrada' }, { status: 404 });
+  }
   const gameIds = list.game_ids || [];
 
   let games = [];
@@ -110,8 +120,9 @@ export async function PUT(request, { params }) {
   const rl = checkRateLimit(writeLimitKey(request, user), LIMITS.write.limit, LIMITS.write.windowMs);
   if (!rl.success) return rateLimitResponse(rl.retryAfter);
 
-  const ownerCheck = await pool.query('SELECT user_id FROM lists WHERE id = $1', [id]);
-  if (!ownerCheck.rows.length) return Response.json({ error: 'Lista no encontrada' }, { status: 404 });
+  if (!isValidId(id)) return Response.json({ error: 'Lista no encontrada' }, { status: 404 });
+  const ownerCheck = await pool.query('SELECT user_id, is_public FROM lists WHERE id = $1', [id]);
+  if (!ownerCheck.rows.length || !canSee(ownerCheck.rows[0], user)) return Response.json({ error: 'Lista no encontrada' }, { status: 404 });
   if (ownerCheck.rows[0].user_id !== user.id) return Response.json({ error: 'Sin permisos' }, { status: 403 });
 
   const body = await request.json();
@@ -136,8 +147,9 @@ export async function DELETE(request, { params }) {
   const rl = checkRateLimit(writeLimitKey(request, user), LIMITS.write.limit, LIMITS.write.windowMs);
   if (!rl.success) return rateLimitResponse(rl.retryAfter);
 
-  const ownerCheck = await pool.query('SELECT user_id FROM lists WHERE id = $1', [id]);
-  if (!ownerCheck.rows.length) return Response.json({ error: 'Lista no encontrada' }, { status: 404 });
+  if (!isValidId(id)) return Response.json({ error: 'Lista no encontrada' }, { status: 404 });
+  const ownerCheck = await pool.query('SELECT user_id, is_public FROM lists WHERE id = $1', [id]);
+  if (!ownerCheck.rows.length || !canSee(ownerCheck.rows[0], user)) return Response.json({ error: 'Lista no encontrada' }, { status: 404 });
   if (ownerCheck.rows[0].user_id !== user.id) return Response.json({ error: 'Sin permisos' }, { status: 403 });
 
   await pool.query('DELETE FROM lists WHERE id = $1', [id]);

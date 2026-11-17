@@ -744,7 +744,7 @@ function PasswordSection({ token }) {
 
 // ── Email section ──────────────────────────────────────────────────────────────
 
-function EmailSection({ token, currentEmail, onEmailUpdate }) {
+function EmailSection({ token, currentEmail }) {
   const { addToast } = useToast();
   const [form,   setForm]   = useState({ new_email: '', password: '' });
   const [saving, setSaving] = useState(false);
@@ -767,7 +767,8 @@ function EmailSection({ token, currentEmail, onEmailUpdate }) {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Error al actualizar el correo'); }
-      else { setForm({ new_email: '', password: '' }); onEmailUpdate(form.new_email); addToast('Correo actualizado correctamente'); }
+      // The email only changes once the link sent to the new address is opened.
+      else { setForm({ new_email: '', password: '' }); addToast(data.message ?? 'Te hemos enviado un enlace a tu nuevo email para confirmar el cambio.'); }
     } catch {
       setError('Error de conexión');
     } finally {
@@ -1204,7 +1205,6 @@ function SettingsContent() {
                 <EmailSection
                   token={token}
                   currentEmail={user?.email ?? ''}
-                  onEmailUpdate={(email) => handleUserUpdate({ email })}
                 />
                 <PasswordSection token={token} />
               </>

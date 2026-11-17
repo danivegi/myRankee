@@ -31,6 +31,23 @@ export async function ensureAuthTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    // Pending email changes: the new address must be confirmed from a link before users.email changes.
+    // Only a SHA-256 hash of the token is stored.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS email_changes (
+        id         SERIAL PRIMARY KEY,
+        user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        new_email  VARCHAR(255) NOT NULL,
+        token_hash CHAR(64) NOT NULL UNIQUE,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used       BOOLEAN NOT NULL DEFAULT false,
+        used_at    TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await pool.query(
+      `CREATE INDEX IF NOT EXISTS idx_email_changes_user ON email_changes(user_id, created_at)`
+    );
     await pool.query(`
       CREATE TABLE IF NOT EXISTS login_attempts (
         id           SERIAL PRIMARY KEY,

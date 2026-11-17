@@ -17,9 +17,12 @@ export async function POST(request, { params }) {
   const user = getUser(request);
   if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
 
-  const listCheck = await pool.query('SELECT id, user_id, title FROM lists WHERE id = $1', [id]);
+  if (!/^\d+$/.test(String(id))) return Response.json({ error: 'Lista no encontrada' }, { status: 404 });
+  const listCheck = await pool.query('SELECT id, user_id, title, is_public FROM lists WHERE id = $1', [id]);
   if (!listCheck.rows.length) return Response.json({ error: 'Lista no encontrada' }, { status: 404 });
   const list = listCheck.rows[0];
+  // Private lists can't be followed (nor detected) by anyone but their owner.
+  if (!list.is_public && Number(list.user_id) !== Number(user.id)) return Response.json({ error: 'Lista no encontrada' }, { status: 404 });
 
   const existing = await pool.query(
     'SELECT 1 FROM list_followers WHERE user_id = $1 AND list_id = $2',
