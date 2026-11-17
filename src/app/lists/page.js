@@ -264,7 +264,8 @@ export default function ListsPage() {
         const res = await fetch(`/api/users/${u.username}/lists`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const data = res.ok ? await res.json() : [];
+        const json = res.ok ? await res.json() : [];
+        const data = Array.isArray(json) ? json : [];
         setLists(append ? (prev) => [...prev, ...data] : data);
         setHasMore(false);
       } else if (tab === 'siguiendo') {
@@ -278,7 +279,8 @@ export default function ListsPage() {
       } else {
         const res = await fetch(`/api/lists?tab=${tab}&page=${pageNum}`);
         const data = res.ok ? await res.json() : { lists: [], hasMore: false };
-        setLists(append ? (prev) => [...prev, ...(data.lists || [])] : (data.lists || []));
+        const page = Array.isArray(data?.lists) ? data.lists : [];
+        setLists(append ? (prev) => [...prev, ...page] : page);
         setHasMore(data.hasMore || false);
       }
     } catch {

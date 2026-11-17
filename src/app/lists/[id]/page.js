@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
@@ -21,20 +21,46 @@ function AddGameModal({ listId, onClose, onAdded, onRemoved, initialAddedIds = [
   const [error, setError] = useState('');
   const [addedIds, setAddedIds] = useState(() => new Set(initialAddedIds));
   const [hoveredId, setHoveredId] = useState(null);
+  const [searchError, setSearchError] = useState('');
+  const searchTimer = useRef(null);
+  const searchSeq = useRef(0);
 
-  async function handleSearch(q) {
+  useEffect(() => () => clearTimeout(searchTimer.current), []);
+
+  // /api/games/search answers { games, total, page } (an object, not an array). Debounced like the
+  // other game searches, and only the latest request may update the results.
+  function handleSearch(q) {
     setQuery(q);
-    if (!q.trim()) { setResults([]); return; }
-    setSearching(true);
-    try {
-      const res = await fetch(`/api/games/search?q=${encodeURIComponent(q)}`);
-      const data = res.ok ? await res.json() : [];
-      setResults(data);
-    } catch {
+    clearTimeout(searchTimer.current);
+    const term = q.trim();
+    const seq = ++searchSeq.current;
+    if (!term) {
       setResults([]);
-    } finally {
+      setSearchError('');
       setSearching(false);
+      return;
     }
+    setSearching(true);
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/games/search?q=${encodeURIComponent(term)}`);
+        const data = await res.json().catch(() => null);
+        if (seq !== searchSeq.current) return; // a newer search is on its way
+        if (!res.ok) {
+          setResults([]);
+          setSearchError(data?.error || 'No se pudo buscar. Inténtalo de nuevo.');
+          return;
+        }
+        setResults(Array.isArray(data?.games) ? data.games : []);
+        setSearchError('');
+      } catch {
+        if (seq !== searchSeq.current) return;
+        setResults([]);
+        setSearchError('Error de conexión. Inténtalo de nuevo.');
+      } finally {
+        if (seq === searchSeq.current) setSearching(false);
+      }
+    }, 350);
   }
 
   async function handleAdd(game) {
@@ -106,6 +132,7 @@ function AddGameModal({ listId, onClose, onAdded, onRemoved, initialAddedIds = [
         </div>
 
         {error && <p className="text-red-400 text-sm">{error}</p>}
+        {searchError && <p className="text-red-400 text-sm">{searchError}</p>}
 
         <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
           {results.map((game) => {
@@ -154,7 +181,7 @@ function AddGameModal({ listId, onClose, onAdded, onRemoved, initialAddedIds = [
               </div>
             );
           })}
-          {query && !searching && results.length === 0 && (
+          {query.trim() && !searching && !searchError && results.length === 0 && (
             <p className="text-[#71717A] text-sm text-center py-6">No se encontraron juegos.</p>
           )}
         </div>
@@ -268,23 +295,28 @@ export default function ListDetailPage({ params }) {
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const [listRes, meRes] = await Promise.all([
-        fetch(`/api/lists/${id}`, { headers }),
-        token ? fetch('/api/auth/me', { headers }) : Promise.resolve(null),
-      ]);
+      try {
+        const [listRes, meRes] = await Promise.all([
+          fetch(`/api/lists/${id}`, { headers }),
+          token ? fetch('/api/auth/me', { headers }) : Promise.resolve(null),
+        ]);
 
-      if (listRes.ok) {
-        const data = await listRes.json();
-        setList(data);
-        setFollowing(data.is_following);
+        if (listRes.ok) {
+          const data = await listRes.json();
+          // The page maps over games: never let a malformed response crash it.
+          setList({ ...data, games: Array.isArray(data?.games) ? data.games : [] });
+          setFollowing(!!data?.is_following);
+        }
+
+        if (meRes?.ok) {
+          const meData = await meRes.json();
+          if (meData?.user) setCurrentUser(meData.user);
+        }
+      } catch {
+        // Network error: falls through to "Lista no encontrada." instead of an endless spinner.
+      } finally {
+        setLoading(false);
       }
-
-      if (meRes?.ok) {
-        const meData = await meRes.json();
-        if (meData?.user) setCurrentUser(meData.user);
-      }
-
-      setLoading(false);
     }
     load();
   }, [id]);

@@ -613,7 +613,7 @@ function SocialLinksSection({ token, username }) {
       .then((rows) => {
         setLinks((prev) => {
           const next = { ...prev };
-          for (const row of rows) if (row.platform in next) next[row.platform] = row.url;
+          for (const row of Array.isArray(rows) ? rows : []) if (row.platform in next) next[row.platform] = row.url;
           return next;
         });
       })

@@ -235,7 +235,10 @@ function AddToListModal({ gameId, onClose }) {
         if (!meRes.ok) { setLoading(false); return; }
         const { user } = await meRes.json();
         const listsRes = await fetch(`/api/users/${user.username}/lists`);
-        if (listsRes.ok) setLists(await listsRes.json());
+        if (listsRes.ok) {
+          const data = await listsRes.json();
+          setLists(Array.isArray(data) ? data : []);
+        }
       } catch {
         // fail silently
       } finally {
