@@ -1821,6 +1821,7 @@ export default function UserProfilePage({ params }) {
   const [achievements,   setAchievements]   = useState([]);
   const [isOwner,        setIsOwner]        = useState(false);
   const [token,          setToken]          = useState(null);
+  const [reportProfileOpen, setReportProfileOpen] = useState(false);
   const [viewerUsername, setViewerUsername] = useState(null);
   const [loading,        setLoading]        = useState(true);
   const [notFound,       setNotFound]       = useState(false);
@@ -2238,6 +2239,7 @@ export default function UserProfilePage({ params }) {
               Editar perfil
             </Link>
           ) : (
+            <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={handleFollow}
               disabled={followLoading}
@@ -2258,6 +2260,17 @@ export default function UserProfilePage({ params }) {
                 </>
               ) : 'Seguir'}
             </button>
+            {viewerUsername && (
+              <button
+                onClick={() => setReportProfileOpen(true)}
+                className="w-10 h-10 rounded-full border border-[#1A1A1A] text-[#71717A] hover:text-red-400 hover:border-red-900/60 transition-colors cursor-pointer flex items-center justify-center"
+                title="Reportar usuario"
+                aria-label="Reportar usuario"
+              >
+                <IconFlag size={15} />
+              </button>
+            )}
+            </div>
           )}
 
         </div>
@@ -2601,6 +2614,11 @@ export default function UserProfilePage({ params }) {
           viewerUsername={viewerUsername}
           onClose={() => setModalType(null)}
         />
+      )}
+
+      {/* ── Report profile modal ── */}
+      {reportProfileOpen && profile && (
+        <ReportModal targetType="user" targetId={profile.id} onClose={() => setReportProfileOpen(false)} />
       )}
 
       {/* ── Top game pick modal ── */}

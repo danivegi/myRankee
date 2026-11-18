@@ -12,6 +12,13 @@ const REASONS = [
   { value: 'other',         label: 'Otro' },
 ];
 
+const TITLES = {
+  review:  'Reportar reseña',
+  comment: 'Reportar comentario',
+  list:    'Reportar lista',
+  user:    'Reportar usuario',
+};
+
 export default function ReportModal({ targetType, targetId, onClose }) {
   const { addToast } = useToast();
   const [reason, setReason]           = useState('');
@@ -60,7 +67,7 @@ export default function ReportModal({ targetType, targetId, onClose }) {
     >
       <div className="w-full max-w-md rounded-2xl border border-[#1A1A1A] bg-[#111111] p-6 flex flex-col gap-5 max-h-[calc(90vh_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom))] overflow-y-auto">
         <div className="flex items-center justify-between">
-          <h2 className="text-white font-semibold text-base">Reportar contenido</h2>
+          <h2 className="text-white font-semibold text-base">{TITLES[targetType] ?? 'Reportar contenido'}</h2>
           <button onClick={onClose} className="text-[#71717A] hover:text-white transition-colors" aria-label="Cerrar">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />

@@ -20,8 +20,16 @@ const ACTION_LABELS = {
 const TARGET_LABELS = {
   review:  'Reseña',
   comment: 'Comentario',
+  list:    'Lista',
   user:    'Usuario',
 };
+
+/** Where the reported item lives (reported lists are public: private ones can't be reported). */
+function contextHref(report) {
+  if (report.target_type === 'list') return `/lists/${report.target_id}`;
+  if (report.target_type === 'user') return report.target_author ? `/user/${report.target_author}` : null;
+  return report.target_game_id ? `/game/${report.target_game_id}` : null;
+}
 
 const REASON_LABELS = {
   spam:          'Spam',
@@ -269,6 +277,9 @@ function ReportCard({ report, onAction, isPending }) {
   const preview = report.target_content
     ? (report.target_content.length > 300 ? report.target_content.slice(0, 300) + '…' : report.target_content)
     : null;
+  // Older API responses have no target_exists: fall back to "has content".
+  const exists = report.target_exists ?? !!preview;
+  const href = contextHref(report);
 
   return (
     <div className="rounded-xl border border-[#1A1A1A] bg-[#111111] p-5 flex flex-col gap-4">
@@ -296,7 +307,7 @@ function ReportCard({ report, onAction, isPending }) {
 
       {/* Reported content preview */}
       <div className="rounded-lg border border-[#2A2A2A] bg-[#0A0A0A] px-4 py-3 flex flex-col gap-2">
-        {preview ? (
+        {exists ? (
           <>
             <div className="flex items-center gap-2 text-xs text-[#71717A] flex-wrap">
               <span className="text-[#3F3F46] uppercase tracking-wide font-mono text-[10px]">
@@ -305,9 +316,9 @@ function ReportCard({ report, onAction, isPending }) {
               <span className="text-[#3F3F46]">·</span>
               <span>por</span>
               <span className="text-white font-medium">@{report.target_author}</span>
-              {report.target_game_id && (
+              {href && (
                 <a
-                  href={`/game/${report.target_game_id}`}
+                  href={href}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="ml-auto text-[#A855F7] text-xs hover:underline flex-shrink-0"
@@ -316,7 +327,13 @@ function ReportCard({ report, onAction, isPending }) {
                 </a>
               )}
             </div>
-            <p className="text-[#D4D4D8] text-sm leading-relaxed">{preview}</p>
+            {preview ? (
+              <p className="text-[#D4D4D8] text-sm leading-relaxed whitespace-pre-line">{preview}</p>
+            ) : (
+              <p className="text-[#3F3F46] text-sm italic">
+                {report.target_type === 'user' ? '(Perfil sin biografía)' : '(Sin texto)'}
+              </p>
+            )}
           </>
         ) : (
           <p className="text-[#3F3F46] text-sm italic">[Contenido eliminado]</p>
@@ -356,12 +373,15 @@ function ReportCard({ report, onAction, isPending }) {
             >
               Avisar
             </button>
-            <button
-              onClick={() => onAction('delete_content')}
-              className="px-3 py-1.5 rounded-lg border text-xs transition-colors cursor-pointer border-orange-700/30 text-orange-400 bg-orange-950/20 hover:bg-orange-900/30 hover:border-orange-600/60"
-            >
-              Eliminar contenido
-            </button>
+            {/* A profile can't be deleted from a report (warn or suspend instead). */}
+            {report.target_type !== 'user' && (
+              <button
+                onClick={() => onAction('delete_content')}
+                className="px-3 py-1.5 rounded-lg border text-xs transition-colors cursor-pointer border-orange-700/30 text-orange-400 bg-orange-950/20 hover:bg-orange-900/30 hover:border-orange-600/60"
+              >
+                {report.target_type === 'list' ? 'Eliminar lista' : 'Eliminar contenido'}
+              </button>
+            )}
             <button
               onClick={() => onAction('suspend_user')}
               className="px-3 py-1.5 rounded-lg border text-xs transition-colors cursor-pointer border-red-800/30 text-red-400 bg-red-950/20 hover:bg-red-900/30 hover:border-red-600/60"

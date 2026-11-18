@@ -21,12 +21,23 @@ const REASON_ES = {
   other:         'incumplimiento de normas',
 };
 
+const AUTHOR_TABLE = { review: 'reviews', comment: 'review_comments', list: 'lists' };
+
 async function getContentAuthor(targetType, targetId) {
   if (targetType === 'user') return Number(targetId);
-  const table = targetType === 'review' ? 'reviews' : 'review_comments';
+  const table = AUTHOR_TABLE[targetType];
+  if (!table) return null;
   const r = await pool.query(`SELECT user_id FROM ${table} WHERE id = $1`, [targetId]);
   return r.rows[0]?.user_id ?? null;
 }
+
+// Spanish wording per target (with the right gender: "tu reseña ha sido eliminada").
+const TARGET_TEXT = {
+  review:  { your: 'tu reseña',     a: 'una reseña',     deleted: 'eliminada' },
+  comment: { your: 'tu comentario', a: 'un comentario',  deleted: 'eliminado' },
+  list:    { your: 'tu lista',      a: 'una lista',      deleted: 'eliminada' },
+  user:    { your: 'tu perfil',     a: 'un perfil',      deleted: 'eliminado' },
+};
 
 export async function PUT(request, { params }) {
   await ensureReportsTables();
@@ -48,7 +59,12 @@ export async function PUT(request, { params }) {
 
   const report = reportRes.rows[0];
   const reasonEs = REASON_ES[report.reason] ?? report.reason;
-  const targetLabel = report.target_type === 'review' ? 'reseña' : report.target_type === 'comment' ? 'comentario' : 'contenido';
+  const text = TARGET_TEXT[report.target_type] ?? { your: 'tu contenido', a: 'un contenido', deleted: 'eliminado' };
+
+  // A profile can't be "deleted" from a report: warn or suspend instead.
+  if (action === 'delete_content' && report.target_type === 'user') {
+    return Response.json({ error: 'Un perfil no se puede eliminar desde un reporte: usa Avisar o Suspender' }, { status: 400 });
+  }
 
   const newStatus = action === 'dismiss' ? 'dismissed' : 'reviewed';
 
@@ -72,6 +88,12 @@ export async function PUT(request, { params }) {
     } else if (report.target_type === 'comment') {
       contentAuthorId = await getContentAuthor('comment', report.target_id);
       await pool.query('DELETE FROM review_comments WHERE id = $1', [report.target_id]);
+    } else if (report.target_type === 'list') {
+      // Same cleanup as deleting an account's lists: games and followers first.
+      contentAuthorId = await getContentAuthor('list', report.target_id);
+      await pool.query('DELETE FROM list_games     WHERE list_id = $1', [report.target_id]);
+      await pool.query('DELETE FROM list_followers WHERE list_id = $1', [report.target_id]);
+      await pool.query('DELETE FROM lists WHERE id = $1', [report.target_id]);
     }
   }
 
@@ -89,8 +111,8 @@ export async function PUT(request, { params }) {
 
   if (contentAuthorId) {
     const authorMsgMap = {
-      warn: `Has recibido un aviso por tu ${targetLabel}. Motivo: ${reasonEs}. Ten cuidado con futuras infracciones.`,
-      delete_content: `Tu ${targetLabel} ha sido eliminado por incumplir las normas de la comunidad. Motivo: ${reasonEs}.`,
+      warn: `Has recibido un aviso por ${text.your}. Motivo: ${reasonEs}. Ten cuidado con futuras infracciones.`,
+      delete_content: `${text.your.charAt(0).toUpperCase()}${text.your.slice(1)} ha sido ${text.deleted} por incumplir las normas de la comunidad. Motivo: ${reasonEs}.`,
       suspend_user: `Tu cuenta ha sido suspendida por violar los términos de servicio. Contacta con soporte si crees que es un error.`,
     };
     const authorMsg = authorMsgMap[action];
@@ -110,7 +132,7 @@ export async function PUT(request, { params }) {
   // ── Notify reporter ───────────────────────────────────────────────────────
 
   const reporterMsg = action === 'dismiss'
-    ? `Tu reporte sobre una ${targetLabel} ha sido revisado. No se encontró infracción de las normas.`
+    ? `Tu reporte sobre ${text.a} ha sido revisado. No se encontró infracción de las normas.`
     : `Tu reporte ha sido revisado y hemos tomado las medidas necesarias.`;
 
   createNotification({

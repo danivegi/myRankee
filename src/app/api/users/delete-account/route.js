@@ -55,6 +55,11 @@ export async function DELETE(request) {
       `DELETE FROM reports WHERE target_type = 'comment' AND target_id IN (SELECT id FROM review_comments WHERE user_id = $1)`,
       [uid]
     );
+    await client.query(
+      `DELETE FROM reports WHERE target_type = 'list' AND target_id IN (SELECT id FROM lists WHERE user_id = $1)`,
+      [uid]
+    );
+    await client.query(`DELETE FROM reports WHERE target_type = 'user' AND target_id = $1`, [uid]);
     await client.query('DELETE FROM reports WHERE reporter_id = $1', [uid]);
 
     // Reviews and ratings

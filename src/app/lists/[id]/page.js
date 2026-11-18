@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '@/app/components/Navbar';
 import Avatar from '@/app/components/Avatar';
+import ReportModal from '@/app/components/ReportModal';
 
 const anton = Anton({ weight: '400', subsets: ['latin'], display: 'swap' });
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
@@ -289,6 +290,7 @@ export default function ListDetailPage({ params }) {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [shareListCopied, setShareListCopied] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -521,6 +523,19 @@ export default function ListDetailPage({ params }) {
               {shareListCopied ? '¡Copiado!' : 'Compartir'}
             </button>
 
+            {currentUser && !isOwner && (
+              <button
+                onClick={() => setReportOpen(true)}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#1A1A1A] text-[#71717A] text-sm hover:text-red-400 hover:border-red-900/60 transition-colors cursor-pointer"
+                title="Reportar lista"
+              >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" />
+              </svg>
+                Reportar
+              </button>
+            )}
+
             {isOwner && (
               <>
                 <button
@@ -629,6 +644,10 @@ export default function ListDetailPage({ params }) {
           </div>
         )}
       </div>
+
+      {reportOpen && (
+        <ReportModal targetType="list" targetId={list.id} onClose={() => setReportOpen(false)} />
+      )}
 
       {addGameOpen && (
         <AddGameModal
