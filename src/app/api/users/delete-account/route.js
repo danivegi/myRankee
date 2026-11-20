@@ -82,6 +82,7 @@ export async function DELETE(request) {
     // Social links and follows
     await client.query('DELETE FROM user_social_links WHERE user_id = $1', [uid]);
     await client.query('DELETE FROM follows WHERE follower_id = $1 OR followed_id = $1', [uid]);
+    await client.query('DELETE FROM user_blocks WHERE blocker_id = $1 OR blocked_id = $1', [uid]);
 
     // Notifications
     await client.query('DELETE FROM notifications WHERE user_id = $1 OR from_user_id = $1', [uid]);

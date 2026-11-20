@@ -1,4 +1,5 @@
 import pool from './db';
+import { isBlockedEitherWay } from './blocks';
 
 const DEFAULT_PREFERENCES = {
   review_likes:        true,
@@ -62,6 +63,8 @@ const PREF_KEY = {
 
 export async function createNotification({ userId, fromUserId, type, entityId = null, entityName = null }) {
   if (userId === fromUserId) return;
+  // Nothing between users who blocked each other (system notifications have no sender).
+  if (fromUserId != null && await isBlockedEitherWay(userId, fromUserId)) return;
 
   if (!SYSTEM_TYPES.has(type)) {
     const prefKey = PREF_KEY[type];

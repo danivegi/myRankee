@@ -925,7 +925,7 @@ export default function GameInteractions({ gameId, gameData }) {
                       {/* Report (other users' reviews) */}
                       {currentUsername && currentUsername !== r.username && (
                         <button
-                          onClick={() => setReportTarget({ type: 'review', id: r.id })}
+                          onClick={() => setReportTarget({ type: 'review', id: r.id, username: r.username })}
                           className="flex items-center gap-1.5 text-[#71717A] hover:text-red-400 text-xs transition-colors cursor-pointer"
                           title="Reportar reseña"
                         >
@@ -1005,6 +1005,8 @@ export default function GameInteractions({ gameId, gameData }) {
         <ReportModal
           targetType={reportTarget.type}
           targetId={reportTarget.id}
+          blockUsername={reportTarget.username ?? null}
+          onBlocked={() => loadReviews()}
           onClose={() => setReportTarget(null)}
         />
       )}

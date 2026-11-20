@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
+import { blockedIdsFor } from '@/lib/blocks';
 import { ensureNotificationsTable } from '@/lib/init-notifications';
 import { queryIGDB } from '@/lib/igdb';
 
@@ -18,6 +19,7 @@ export async function GET(request) {
   if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
 
   await ensureNotificationsTable();
+  const hidden = await blockedIdsFor(user.id);
 
   const res = await pool.query(
     `SELECT n.id, n.type, n.read, n.entity_id, n.entity_name, n.created_at,
@@ -28,9 +30,10 @@ export async function GET(request) {
      LEFT JOIN users u ON u.id = n.from_user_id
      LEFT JOIN achievements a ON a.id = n.entity_id AND n.type = 'achievement'
      WHERE n.user_id = $1
+       AND (n.from_user_id IS NULL OR n.from_user_id <> ALL($2::int[]))
      ORDER BY n.created_at DESC
      LIMIT 50`,
-    [user.id]
+    [user.id, hidden]
   );
 
   // Batch-fetch game names from IGDB for like notifications that have no entity_name yet

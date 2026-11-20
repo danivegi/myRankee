@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 import { ensureCommentsTables } from '@/lib/comments';
+import { blockedIdsFor, interactionBlockedResponse } from '@/lib/blocks';
 import { createNotification } from '@/lib/init-notifications';
 import { checkRateLimit, getIp, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
 import { validate, commentSchema, validationErrorResponse } from '@/lib/validation';
@@ -25,14 +26,18 @@ export async function GET(request, { params }) {
 
   await ensureCommentsTables();
 
+  // Comments by users the viewer blocked aren't shown to the viewer (optional token).
+  const hidden = await blockedIdsFor(getUser(request)?.id ?? null);
+
   const res = await pool.query(
     `SELECT c.id, c.content, c.created_at,
             u.username, u.nombre, u.avatar_url
      FROM review_comments c
      JOIN users u ON u.id = c.user_id
      WHERE c.review_id = $1
+       AND c.user_id <> ALL($2::int[])
      ORDER BY c.created_at ASC`,
-    [reviewId]
+    [reviewId, hidden]
   );
 
   return Response.json(res.rows);
@@ -62,6 +67,11 @@ export async function POST(request, { params }) {
   if (!reviewRes.rows.length)
     return Response.json({ error: 'Reseña no encontrada' }, { status: 404 });
   const review = reviewRes.rows[0];
+
+  if (Number(review.user_id) !== Number(user.id)) {
+    const blocked = await interactionBlockedResponse(user.id, review.user_id);
+    if (blocked) return blocked;
+  }
 
   const commentRes = await pool.query(
     `INSERT INTO review_comments (review_id, user_id, content)

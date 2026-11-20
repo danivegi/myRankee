@@ -53,7 +53,9 @@ export default function ReviewCommentsSection({
   const [reportTarget, setReportTarget] = useState(null);
 
   useEffect(() => {
-    fetch(`/api/reviews/${reviewId}/comments`)
+    // With the token, comments by users you blocked aren't returned.
+    const token = localStorage.getItem('token');
+    fetch(`/api/reviews/${reviewId}/comments`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => {
         setComments(data);
@@ -148,7 +150,7 @@ export default function ReviewCommentsSection({
                     <div className="ml-auto flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       {currentUsername && currentUsername !== c.username && (
                         <button
-                          onClick={() => setReportTarget(c.id)}
+                          onClick={() => setReportTarget({ id: c.id, username: c.username })}
                           className="text-[#71717A] hover:text-red-400 transition-colors cursor-pointer"
                           aria-label="Reportar comentario"
                         >
@@ -214,7 +216,9 @@ export default function ReviewCommentsSection({
       {reportTarget != null && (
         <ReportModal
           targetType="comment"
-          targetId={reportTarget}
+          targetId={reportTarget.id}
+          blockUsername={reportTarget.username}
+          onBlocked={(blockedUsername) => setComments((prev) => prev.filter((c) => c.username !== blockedUsername))}
           onClose={() => setReportTarget(null)}
         />
       )}

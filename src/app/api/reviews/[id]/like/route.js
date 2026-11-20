@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
+import { interactionBlockedResponse } from '@/lib/blocks';
 import { createNotification, deleteToggleNotification } from '@/lib/init-notifications';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
 import { checkRateLimit, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
@@ -37,6 +38,12 @@ export async function POST(request, { params }) {
     'SELECT 1 FROM review_likes WHERE user_id = $1 AND review_id = $2',
     [user.id, reviewId]
   );
+
+  // A new like is blocked between users who blocked each other; removing an existing like is allowed.
+  if (!existing.rows.length) {
+    const blocked = await interactionBlockedResponse(user.id, review.user_id);
+    if (blocked) return blocked;
+  }
 
   let liked;
   if (existing.rows.length) {

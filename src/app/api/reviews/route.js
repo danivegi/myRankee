@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
+import { blockedIdsFor } from '@/lib/blocks';
 import { ensureCommentsTables } from '@/lib/comments';
 import { checkRateLimit, getIp, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
 import { validate, reviewSchema, validationErrorResponse } from '@/lib/validation';
@@ -28,6 +29,7 @@ export async function GET(request) {
 
   const viewer = getUser(request);
   const viewerUserId = viewer?.id ?? null;
+  const hidden = await blockedIdsFor(viewerUserId);
 
   const result = await pool.query(
     `SELECT r.id, r.content, r.created_at,
@@ -46,8 +48,9 @@ export async function GET(request) {
      ) lc ON lc.review_id = r.id
      LEFT JOIN review_likes ul ON ul.review_id = r.id AND ul.user_id = $2
      WHERE r.igdb_game_id = $1
+       AND r.user_id <> ALL($3::int[])
      ORDER BY r.created_at DESC`,
-    [igdb_game_id, viewerUserId]
+    [igdb_game_id, viewerUserId, hidden]
   );
 
   return Response.json(result.rows);

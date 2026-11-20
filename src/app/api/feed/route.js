@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { blockedIdsFor, ensureBlocksTable } from '@/lib/blocks';
 import pool from '@/lib/db';
 import { queryIGDB, coverUrl } from '@/lib/igdb';
 import { ensureFollowsTable } from '@/lib/init-follows';
@@ -54,6 +55,8 @@ export async function GET(request) {
   try {
     await ensureFollowsTable();
     await ensureCommentsTables();
+    await ensureBlocksTable();
+    const hidden = await blockedIdsFor(viewerId);
 
     // ── Activity feed ─────────────────────────────────────────────────────────
     let activityRows;
@@ -63,8 +66,10 @@ export async function GET(request) {
       const res = await pool.query(
         `${FEED_SELECT}
          AND a.created_at > NOW() - INTERVAL '7 days'
+         AND a.user_id <> ALL($1::int[])
          ORDER BY likes_count DESC, a.created_at DESC
-         LIMIT 60`
+         LIMIT 60`,
+        [hidden]
       );
       activityRows = res.rows;
 
@@ -78,17 +83,20 @@ export async function GET(request) {
       const res = await pool.query(
         `${FEED_SELECT}
          AND a.user_id IN (SELECT followed_id FROM follows WHERE follower_id = $1)
+         AND a.user_id <> ALL($2::int[])
          ORDER BY a.created_at DESC
          LIMIT 60`,
-        [viewerId]
+        [viewerId, hidden]
       );
       activityRows = res.rows;
 
     } else {
       const res = await pool.query(
         `${FEED_SELECT}
+         AND a.user_id <> ALL($1::int[])
          ORDER BY a.created_at DESC
-         LIMIT 60`
+         LIMIT 60`,
+        [hidden]
       );
       activityRows = res.rows;
     }
@@ -222,6 +230,11 @@ export async function GET(request) {
            LEFT JOIN reviews r ON r.user_id = u.id
            WHERE u.id != $1
              AND NOT EXISTS (SELECT 1 FROM follows WHERE follower_id = $1 AND followed_id = u.id)
+             -- Never suggest someone you can't follow (blocked either way).
+             AND NOT EXISTS (
+               SELECT 1 FROM user_blocks b
+               WHERE (b.blocker_id = $1 AND b.blocked_id = u.id) OR (b.blocker_id = u.id AND b.blocked_id = $1)
+             )
            GROUP BY u.id
            ORDER BY review_count DESC
            LIMIT 5`,

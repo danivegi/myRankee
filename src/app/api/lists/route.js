@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 import { queryIGDB, coverUrl } from '@/lib/igdb';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
+import { blockedIdsFor } from '@/lib/blocks';
 import { checkRateLimit, getIp, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
 import { validate, listSchema, validationErrorResponse } from '@/lib/validation';
 import { sanitizeText } from '@/lib/sanitize';
@@ -26,6 +27,8 @@ export async function GET(request) {
   const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
   const limit = 12;
   const offset = (page - 1) * limit;
+  // Lists of users the viewer blocked are left out (optional token).
+  const hidden = await blockedIdsFor(getUser(request)?.id ?? null);
 
   let extraWhere = '';
   let orderBy;
@@ -53,10 +56,11 @@ export async function GET(request) {
      JOIN users u ON u.id = l.user_id
      LEFT JOIN list_games lg ON lg.list_id = l.id
      WHERE l.is_public = true${extraWhere}
+       AND l.user_id <> ALL($3::int[])
      GROUP BY l.id, u.username, u.nombre, u.apellido, u.avatar_url
      ORDER BY ${orderBy}
      LIMIT $1 OFFSET $2`,
-    [limit, offset]
+    [limit, offset, hidden]
   );
 
   const lists = await Promise.all(

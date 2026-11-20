@@ -24,7 +24,7 @@ export async function GET(request) {
     backlogRes, commentsRes, achievementsRes,
     followersRes, followingRes,
     favGamesRes, favTopRes,
-    socialLinksRes, notifPrefsRes, emailChangesRes,
+    socialLinksRes, notifPrefsRes, emailChangesRes, blocksRes,
   ] = await Promise.all([
     pool.query(
       `SELECT username, nombre, apellido, email, bio, avatar_url, created_at, terms_accepted_at
@@ -61,6 +61,11 @@ export async function GET(request) {
       `SELECT new_email, created_at, expires_at, used, used_at FROM email_changes
        WHERE user_id = $1 ORDER BY created_at DESC`, [uid]
     ).catch(() => ({ rows: [] })),
+    // Only who YOU blocked (never who blocked you). Empty if the table doesn't exist yet.
+    pool.query(
+      `SELECT u.username, b.created_at FROM user_blocks b JOIN users u ON u.id = b.blocked_id
+       WHERE b.blocker_id = $1 ORDER BY b.created_at DESC`, [uid]
+    ).catch(() => ({ rows: [] })),
   ]);
 
   // Attach games to each list
@@ -92,6 +97,7 @@ export async function GET(request) {
     social_links: socialLinksRes.rows,
     notification_preferences: notifPrefsRes.rows[0]?.preferences ?? null,
     email_changes: emailChangesRes.rows,
+    blocked_users: blocksRes.rows,
   };
 
   const username = profileRes.rows[0]?.username ?? uid;

@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
+import { ensureBlocksTable } from '@/lib/blocks';
 import { ensureFollowsTable } from '@/lib/init-follows';
 
 function getViewerId(request) {
@@ -14,6 +15,7 @@ export async function GET(request, { params }) {
   const viewerId = getViewerId(request);
 
   await ensureFollowsTable();
+  await ensureBlocksTable();
 
   const hasViewer = viewerId !== null;
   const result = await pool.query(
@@ -27,7 +29,11 @@ export async function GET(request, { params }) {
        ${hasViewer
          ? 'EXISTS(SELECT 1 FROM follows WHERE follower_id = $2 AND followed_id = u.id)'
          : 'false'
-       } AS is_following
+       } AS is_following,
+       ${hasViewer
+         ? 'EXISTS(SELECT 1 FROM user_blocks WHERE blocker_id = $2 AND blocked_id = u.id)'
+         : 'false'
+       } AS blocked_by_me
      FROM users u
      WHERE u.username = $1`,
     hasViewer ? [username, viewerId] : [username]

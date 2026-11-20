@@ -646,7 +646,13 @@ export default function ListDetailPage({ params }) {
       </div>
 
       {reportOpen && (
-        <ReportModal targetType="list" targetId={list.id} onClose={() => setReportOpen(false)} />
+        <ReportModal
+          targetType="list"
+          targetId={list.id}
+          blockUsername={list.creator?.username ?? null}
+          onBlocked={() => setFollowing(false)}
+          onClose={() => setReportOpen(false)}
+        />
       )}
 
       {addGameOpen && (

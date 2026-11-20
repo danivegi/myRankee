@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
+import { interactionBlockedResponse } from '@/lib/blocks';
 import { createNotification, deleteToggleNotification } from '@/lib/init-notifications';
 
 function getUser(request) {
@@ -28,6 +29,12 @@ export async function POST(request, { params }) {
     'SELECT 1 FROM list_followers WHERE user_id = $1 AND list_id = $2',
     [user.id, id]
   );
+
+  // Following is blocked between users who blocked each other (unfollowing always works).
+  if (!existing.rows.length) {
+    const blocked = await interactionBlockedResponse(user.id, list.user_id);
+    if (blocked) return blocked;
+  }
 
   // followers_count moves only when a row was actually inserted/deleted, so concurrent
   // toggles can't make it drift from the real number of list_followers rows.

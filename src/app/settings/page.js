@@ -8,6 +8,7 @@ import Link from 'next/link';
 import Navbar from '@/app/components/Navbar';
 import { useToast } from '@/app/components/ToastProvider';
 import PasswordStrength from '@/app/components/PasswordStrength';
+import Avatar from '@/app/components/Avatar';
 
 const anton = Anton({ weight: '400', subsets: ['latin'], display: 'swap' });
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
@@ -19,6 +20,7 @@ const TABS = [
   { id: 'perfil',         label: 'Perfil',        icon: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></> },
   { id: 'cuenta',         label: 'Cuenta',         icon: <><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></> },
   { id: 'notificaciones', label: 'Notificaciones', icon: <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></> },
+  { id: 'bloqueados',     label: 'Bloqueados',     icon: <><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></> },
   { id: 'peligro',        label: 'Zona peligro',   icon: <><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></> },
 ];
 
@@ -823,6 +825,76 @@ function Toggle({ checked, onChange, disabled }) {
   );
 }
 
+// ── Usuarios bloqueados ───────────────────────────────────────────────────────
+
+function BlockedUsersSection({ token }) {
+  const { addToast } = useToast();
+  const [users, setUsers]       = useState(null);
+  const [working, setWorking]   = useState(null);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch('/api/blocks', { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setUsers(Array.isArray(data) ? data : []))
+      .catch(() => setUsers([]));
+  }, [token]);
+
+  async function unblock(username) {
+    setWorking(username);
+    try {
+      const res = await fetch(`/api/users/${encodeURIComponent(username)}/block`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { addToast(data.error ?? 'No se ha podido desbloquear', 'error'); return; }
+      setUsers((prev) => (prev ?? []).filter((u) => u.username !== username));
+      addToast(`Has desbloqueado a @${username}`);
+    } catch {
+      addToast('Error de conexión', 'error');
+    } finally {
+      setWorking(null);
+    }
+  }
+
+  return (
+    <Section
+      title="Usuarios bloqueados"
+      subtitle="No podéis seguiros ni interactuar, y no ves su actividad. No saben que les has bloqueado."
+    >
+      {users === null ? (
+        <div className="flex justify-center py-6">
+          <div className="w-5 h-5 border-2 border-[#3F3F46] border-t-[#A855F7] rounded-full animate-spin" />
+        </div>
+      ) : users.length === 0 ? (
+        <p className="text-[#71717A] text-sm">No has bloqueado a nadie.</p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-[#1A1A1A]">
+          {users.map((u) => (
+            <li key={u.username} className="flex items-center gap-3 py-3">
+              <Avatar user={u} size={36} />
+              <Link href={`/user/${u.username}`} className="flex-1 min-w-0">
+                <p className="text-white text-sm font-medium truncate">
+                  {[u.nombre, u.apellido].filter(Boolean).join(' ') || u.username}
+                </p>
+                <p className="text-[#71717A] text-xs truncate">@{u.username}</p>
+              </Link>
+              <button
+                onClick={() => unblock(u.username)}
+                disabled={working === u.username}
+                className="px-4 py-2 rounded-full border border-[#3F3F46] text-white text-xs font-semibold hover:border-[#A855F7] transition-colors disabled:opacity-50 cursor-pointer flex-shrink-0"
+              >
+                {working === u.username ? '...' : 'Desbloquear'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  );
+}
+
 function NotificationsSection({ token }) {
   const { addToast } = useToast();
   const [prefs,   setPrefs]   = useState(null);
@@ -1212,6 +1284,10 @@ function SettingsContent() {
 
             {activeTab === 'notificaciones' && (
               <NotificationsSection token={token} />
+            )}
+
+            {activeTab === 'bloqueados' && (
+              <BlockedUsersSection token={token} />
             )}
 
             {activeTab === 'peligro' && (

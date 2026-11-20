@@ -1598,6 +1598,7 @@ function ReviewCard({ review, token, viewerUsername, reviewAuthorUsername }) {
         <ReportModal
           targetType="review"
           targetId={review.id}
+          blockUsername={reviewAuthorUsername}
           onClose={() => setReportOpen(false)}
         />
       )}
@@ -1822,6 +1823,11 @@ export default function UserProfilePage({ params }) {
   const [isOwner,        setIsOwner]        = useState(false);
   const [token,          setToken]          = useState(null);
   const [reportProfileOpen, setReportProfileOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [blockedByMe,     setBlockedByMe]     = useState(false);
+  const [blockConfirm,    setBlockConfirm]    = useState(false);
+  const [blockLoading,    setBlockLoading]    = useState(false);
+  const { addToast } = useToast();
   const [viewerUsername, setViewerUsername] = useState(null);
   const [loading,        setLoading]        = useState(true);
   const [notFound,       setNotFound]       = useState(false);
@@ -1939,6 +1945,7 @@ export default function UserProfilePage({ params }) {
         setProfile(user);
         setIsFollowing(user.is_following ?? false);
         setFollowersCount(user.total_followers ?? 0);
+        setBlockedByMe(!!user.blocked_by_me);
 
         const [revRes, ratRes, achRes, topRes, socialRes] = await Promise.all([
           fetch(`/api/users/${username}/reviews`, { headers: t ? { Authorization: `Bearer ${t}` } : {} }),
@@ -2078,13 +2085,52 @@ export default function UserProfilePage({ params }) {
         method:  'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        const data = await res.json();
         setIsFollowing(data.following);
         setFollowersCount(data.followers_count);
+      } else {
+        addToast(data.error ?? 'No se ha podido completar la acción', 'error');
       }
     } finally {
       setFollowLoading(false);
+    }
+  }
+
+  // Re-read the profile after (un)blocking: follows between both users may have been removed.
+  async function reloadProfileCounts() {
+    try {
+      const res = await fetch(`/api/users/${username}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) return;
+      const { user } = await res.json();
+      setProfile(user);
+      setIsFollowing(user.is_following ?? false);
+      setFollowersCount(user.total_followers ?? 0);
+      setBlockedByMe(!!user.blocked_by_me);
+    } catch { /* keep what's shown */ }
+  }
+
+  async function handleBlock(block) {
+    if (!token || blockLoading) return;
+    setBlockLoading(true);
+    try {
+      const res = await fetch(`/api/users/${username}/block`, {
+        method:  block ? 'POST' : 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        addToast(data.error ?? 'No se ha podido completar la acción', 'error');
+        return;
+      }
+      setBlockedByMe(!!data.blocked);
+      setBlockConfirm(false);
+      addToast(block ? `Has bloqueado a @${username}` : `Has desbloqueado a @${username}`);
+      await reloadProfileCounts();
+    } catch {
+      addToast('Error de conexión', 'error');
+    } finally {
+      setBlockLoading(false);
     }
   }
 
@@ -2239,7 +2285,16 @@ export default function UserProfilePage({ params }) {
               Editar perfil
             </Link>
           ) : (
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="relative flex items-center gap-2 flex-shrink-0">
+            {blockedByMe ? (
+              <button
+                onClick={() => handleBlock(false)}
+                disabled={blockLoading}
+                className="px-6 py-2.5 rounded-full border border-red-900/60 text-red-400 text-sm font-semibold hover:bg-red-950/30 transition-colors cursor-pointer disabled:opacity-60"
+              >
+                {blockLoading ? '...' : 'Desbloquear'}
+              </button>
+            ) : (
             <button
               onClick={handleFollow}
               disabled={followLoading}
@@ -2260,21 +2315,62 @@ export default function UserProfilePage({ params }) {
                 </>
               ) : 'Seguir'}
             </button>
+            )}
             {viewerUsername && (
-              <button
-                onClick={() => setReportProfileOpen(true)}
-                className="w-10 h-10 rounded-full border border-[#1A1A1A] text-[#71717A] hover:text-red-400 hover:border-red-900/60 transition-colors cursor-pointer flex items-center justify-center"
-                title="Reportar usuario"
-                aria-label="Reportar usuario"
-              >
-                <IconFlag size={15} />
-              </button>
+              <>
+                <button
+                  onClick={() => setProfileMenuOpen((o) => !o)}
+                  className="w-10 h-10 rounded-full border border-[#1A1A1A] text-[#71717A] hover:text-white hover:border-[#3F3F46] transition-colors cursor-pointer flex items-center justify-center"
+                  title="Más opciones"
+                  aria-label="Más opciones"
+                  aria-expanded={profileMenuOpen}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
+                  </svg>
+                </button>
+                {profileMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
+                    <div className="absolute right-0 top-12 z-50 w-52 rounded-xl border border-[#1A1A1A] bg-[#111111] py-1 shadow-2xl">
+                      <button
+                        onClick={() => { setProfileMenuOpen(false); setReportProfileOpen(true); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-sm text-white hover:bg-[#1A1A1A] transition-colors cursor-pointer"
+                      >
+                        <IconFlag size={14} /> Reportar usuario
+                      </button>
+                      <button
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          if (blockedByMe) handleBlock(false); else setBlockConfirm(true);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-sm text-red-400 hover:bg-[#1A1A1A] transition-colors cursor-pointer"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                        </svg>
+                        {blockedByMe ? 'Desbloquear' : 'Bloquear'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
             )}
             </div>
           )}
 
         </div>
       </div>
+
+      {/* ── You blocked this user ── */}
+      {!isOwner && blockedByMe && (
+        <div className="px-4 md:px-12 pt-4">
+          <div className="rounded-xl border border-red-900/40 bg-red-950/20 px-4 py-3 text-sm text-[#D4D4D8]">
+            Has bloqueado a <span className="text-white font-semibold">@{username}</span>. No podéis seguiros ni
+            interactuar con vuestras reseñas, comentarios y listas, y no verás su actividad en tu feed.
+          </div>
+        </div>
+      )}
 
       {/* ── Top 5 Showcase ── */}
       {(isOwner || topGames.length > 0) && (
@@ -2618,7 +2714,48 @@ export default function UserProfilePage({ params }) {
 
       {/* ── Report profile modal ── */}
       {reportProfileOpen && profile && (
-        <ReportModal targetType="user" targetId={profile.id} onClose={() => setReportProfileOpen(false)} />
+        <ReportModal
+          targetType="user"
+          targetId={profile.id}
+          blockUsername={blockedByMe ? null : username}
+          onBlocked={() => { setBlockedByMe(true); reloadProfileCounts(); }}
+          onClose={() => setReportProfileOpen(false)}
+        />
+      )}
+
+      {/* ── Block confirmation ── */}
+      {blockConfirm && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setBlockConfirm(false); }}
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-[#1A1A1A] bg-[#111111] p-6 flex flex-col gap-5">
+            <div className="flex flex-col gap-2">
+              <h3 className="text-white font-semibold">¿Bloquear a @{username}?</h3>
+              <p className="text-[#9CA3AF] text-sm leading-relaxed">
+                Dejaréis de seguiros y no podréis interactuar con vuestras reseñas, comentarios y listas.
+                No verás su actividad en tu feed ni sus reseñas y comentarios. @{username} no recibirá ningún aviso.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setBlockConfirm(false)}
+                className="flex-1 rounded-xl border border-[#1A1A1A] text-[#9CA3AF] text-sm py-2.5 hover:text-white transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleBlock(true)}
+                disabled={blockLoading}
+                className="flex-1 rounded-xl text-sm py-2.5 font-medium transition-all disabled:opacity-40 cursor-pointer"
+                style={{ backgroundColor: '#EF4444', color: '#fff' }}
+              >
+                {blockLoading ? 'Bloqueando…' : 'Bloquear'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Top game pick modal ── */}

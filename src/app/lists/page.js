@@ -277,7 +277,10 @@ export default function ListsPage() {
         setLists(append ? (prev) => [...prev, ...(Array.isArray(data) ? data : [])] : (Array.isArray(data) ? data : []));
         setHasMore(false);
       } else {
-        const res = await fetch(`/api/lists?tab=${tab}&page=${pageNum}`);
+        const token = localStorage.getItem('token');
+        const res = await fetch(`/api/lists?tab=${tab}&page=${pageNum}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         const data = res.ok ? await res.json() : { lists: [], hasMore: false };
         const page = Array.isArray(data?.lists) ? data.lists : [];
         setLists(append ? (prev) => [...prev, ...page] : page);

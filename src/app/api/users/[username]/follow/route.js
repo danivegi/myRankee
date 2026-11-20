@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 import { ensureFollowsTable } from '@/lib/init-follows';
+import { interactionBlockedResponse } from '@/lib/blocks';
 import { createNotification, deleteToggleNotification } from '@/lib/init-notifications';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
 import { checkRateLimit, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
@@ -49,6 +50,10 @@ export async function POST(request, { params }) {
 
     if (followerId === followedId)
       return Response.json({ error: 'No puedes seguirte a ti mismo' }, { status: 400 });
+
+    // Blocking removed any follow between them: this would be a new follow either way.
+    const blocked = await interactionBlockedResponse(followerId, followedId);
+    if (blocked) return blocked;
 
     const existsRes = await pool.query(
       'SELECT id FROM follows WHERE follower_id = $1 AND followed_id = $2',

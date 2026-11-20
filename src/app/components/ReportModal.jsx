@@ -19,10 +19,15 @@ const TITLES = {
   user:    'Reportar usuario',
 };
 
-export default function ReportModal({ targetType, targetId, onClose }) {
+/**
+ * `blockUsername`: the author of the reported content. When set, offers "Bloquear también a @x"
+ * (Google Play wants report and block together); `onBlocked` runs after a successful block.
+ */
+export default function ReportModal({ targetType, targetId, onClose, blockUsername = null, onBlocked }) {
   const { addToast } = useToast();
   const [reason, setReason]           = useState('');
   const [description, setDescription] = useState('');
+  const [alsoBlock, setAlsoBlock]     = useState(false);
   const [loading, setLoading]         = useState(false);
   const [mounted, setMounted]         = useState(false);
 
@@ -44,10 +49,33 @@ export default function ReportModal({ targetType, targetId, onClose }) {
         body: JSON.stringify({ target_type: targetType, target_id: targetId, reason, description: description.trim() || undefined }),
       });
       const data = await res.json();
+      // Blocking also goes ahead when it was already reported (409): that's still what the user asked.
+      let blocked = false;
+      if (alsoBlock && blockUsername && (res.ok || res.status === 409)) {
+        const b = await fetch(`/api/users/${encodeURIComponent(blockUsername)}/block`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        blocked = b.ok;
+        if (!b.ok) {
+          const bd = await b.json().catch(() => ({}));
+          addToast(bd.error ?? `No se ha podido bloquear a @${blockUsername}`, 'error');
+        } else {
+          onBlocked?.(blockUsername);
+        }
+      }
       if (!res.ok) {
-        addToast(data.error ?? 'Error al enviar el reporte', 'error');
+        if (blocked) {
+          addToast(`${data.error ?? 'Ya habías reportado este contenido'}. Has bloqueado a @${blockUsername}.`, 'success');
+          onClose();
+        } else {
+          addToast(data.error ?? 'Error al enviar el reporte', 'error');
+        }
       } else {
-        addToast('Reporte enviado. Revisaremos el contenido.', 'success');
+        addToast(
+          blocked ? `Reporte enviado. Has bloqueado a @${blockUsername}.` : 'Reporte enviado. Revisaremos el contenido.',
+          'success'
+        );
         onClose();
       }
     } catch {
@@ -105,6 +133,23 @@ export default function ReportModal({ targetType, targetId, onClose }) {
             />
             <p className="text-[#3F3F46] text-xs text-right">{description.length}/500</p>
           </div>
+
+          {blockUsername && (
+            <label className="flex items-start gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={alsoBlock}
+                onChange={(e) => setAlsoBlock(e.target.checked)}
+                className="mt-0.5 accent-[#EF4444] cursor-pointer"
+              />
+              <span className="text-[#D4D4D8] text-sm">
+                Bloquear también a <span className="text-white font-medium">@{blockUsername}</span>
+                <span className="block text-[#71717A] text-xs mt-0.5">
+                  No podréis seguiros ni interactuar, y dejarás de ver su actividad. No recibirá ningún aviso.
+                </span>
+              </span>
+            </label>
+          )}
 
           <div className="flex gap-3 pt-1">
             <button
