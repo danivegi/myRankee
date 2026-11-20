@@ -1,22 +1,12 @@
-import jwt from 'jsonwebtoken';
+import { optionalUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { queryIGDB, coverUrl } from '@/lib/igdb';
 import { translateGenre } from '@/lib/translations';
 
-function getUser(request) {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  try {
-    return jwt.verify(auth.slice(7), process.env.JWT_SECRET);
-  } catch {
-    return null;
-  }
-}
-
 export async function GET(request, { params }) {
   const { username } = await params;
 
-  const viewer = getUser(request);
+  const viewer = await optionalUser(request);
   const viewerUserId = viewer?.id ?? null;
 
   // Get the user id

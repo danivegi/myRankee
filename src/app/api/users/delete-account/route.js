@@ -1,19 +1,13 @@
-import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { requireUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { checkRateLimit, getIp, rateLimitResponse, LIMITS } from '@/lib/rate-limit';
 import { logSecurityEvent } from '@/lib/init-auth';
 
-function getUser(request) {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  try { return jwt.verify(auth.slice(7), process.env.JWT_SECRET); }
-  catch { return null; }
-}
-
 export async function DELETE(request) {
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   const ip = getIp(request);
   const rl = checkRateLimit(`delete:${ip}`, 5, 60_000);

@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { optionalUser, requireUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
 import { blockedIdsFor } from '@/lib/blocks';
@@ -6,16 +6,6 @@ import { ensureCommentsTables } from '@/lib/comments';
 import { checkRateLimit, getIp, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
 import { validate, reviewSchema, validationErrorResponse } from '@/lib/validation';
 import { sanitizeText } from '@/lib/sanitize';
-
-function getUser(request) {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  try {
-    return jwt.verify(auth.slice(7), process.env.JWT_SECRET);
-  } catch {
-    return null;
-  }
-}
 
 export async function GET(request) {
   const igdb_game_id = request.nextUrl.searchParams.get('igdb_game_id');
@@ -27,7 +17,7 @@ export async function GET(request) {
 
   await ensureCommentsTables();
 
-  const viewer = getUser(request);
+  const viewer = await optionalUser(request);
   const viewerUserId = viewer?.id ?? null;
   const hidden = await blockedIdsFor(viewerUserId);
 
@@ -57,8 +47,9 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   const rl = checkRateLimit(writeLimitKey(request, user), LIMITS.write.limit, LIMITS.write.windowMs);
   if (!rl.success) return rateLimitResponse(rl.retryAfter);

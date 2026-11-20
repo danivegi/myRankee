@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { requireUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { sendEmailChangeNotice, sendEmailChangeVerification } from '@/lib/email';
 import { ensureAuthTables, logSecurityEvent } from '@/lib/init-auth';
@@ -11,16 +11,10 @@ const REQUEST_LIMIT = { limit: 3, windowMs: 60 * 60 * 1000 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function getUser(request) {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  try { return jwt.verify(auth.slice(7), process.env.JWT_SECRET); }
-  catch { return null; }
-}
-
 export async function PUT(request) {
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   const rl = checkRateLimit(writeLimitKey(request, user), LIMITS.write.limit, LIMITS.write.windowMs);
   if (!rl.success) return rateLimitResponse(rl.retryAfter);

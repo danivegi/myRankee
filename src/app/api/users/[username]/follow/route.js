@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { optionalUser, requireUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { ensureFollowsTable } from '@/lib/init-follows';
 import { interactionBlockedResponse } from '@/lib/blocks';
@@ -6,16 +6,9 @@ import { createNotification, deleteToggleNotification } from '@/lib/init-notific
 import { checkAndUnlockAchievements } from '@/lib/achievements';
 import { checkRateLimit, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
 
-function authPayload(request) {
-  const h = request.headers.get('authorization');
-  if (!h?.startsWith('Bearer ')) return null;
-  try { return jwt.verify(h.slice(7), process.env.JWT_SECRET); }
-  catch { return null; }
-}
-
 export async function GET(request, { params }) {
   const { username } = await params;
-  const payload = authPayload(request);
+  const payload = await optionalUser(request);
   if (!payload) return Response.json({ is_following: false });
 
   await ensureFollowsTable();
@@ -32,8 +25,9 @@ export async function GET(request, { params }) {
 
 export async function POST(request, { params }) {
   const { username } = await params;
-  const payload = authPayload(request);
-  if (!payload) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const payload = session.user;
 
   const rl = checkRateLimit(writeLimitKey(request, payload), LIMITS.write.limit, LIMITS.write.windowMs);
   if (!rl.success) return rateLimitResponse(rl.retryAfter);

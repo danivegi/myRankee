@@ -1,18 +1,11 @@
-import jwt from 'jsonwebtoken';
+import { optionalUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { ensureAchievementsTable } from '@/lib/achievements';
 
 export async function GET(request, { params }) {
   const { username } = await params;
 
-  const auth = request.headers.get('authorization');
-  let viewerId = null;
-  if (auth?.startsWith('Bearer ')) {
-    try {
-      const payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
-      viewerId = payload.id;
-    } catch { /* unauthenticated */ }
-  }
+  const viewerId = (await optionalUser(request))?.id ?? null;
 
   const userRes = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
   if (!userRes.rows.length) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 });

@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
+import { bumpTokenVersion } from '@/lib/auth';
 import { checkPassword } from '@/lib/password';
 import { ensureAuthTables, logSecurityEvent } from '@/lib/init-auth';
 import { checkRateLimit, getIp, rateLimitResponse, LIMITS } from '@/lib/rate-limit';
@@ -42,6 +43,8 @@ export async function POST(request) {
   const hash = await bcrypt.hash(password, 10);
   await pool.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [hash, user_id]);
   await pool.query(`UPDATE password_resets SET used = true WHERE id = $1`, [id]);
+  // A reset ends every session (including a stolen one).
+  await bumpTokenVersion(user_id);
 
   logSecurityEvent({ userId: user_id, eventType: 'password_reset', ip });
 

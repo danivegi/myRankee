@@ -1,15 +1,5 @@
-import jwt from 'jsonwebtoken';
+import { requireUser } from '@/lib/auth';
 import pool from '@/lib/db';
-
-function getUser(request) {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  try {
-    return jwt.verify(auth.slice(7), process.env.JWT_SECRET);
-  } catch {
-    return null;
-  }
-}
 
 async function checkOwner(listId, userId) {
   if (!/^\d+$/.test(String(listId))) return { error: 'Lista no encontrada', status: 404 };
@@ -25,8 +15,9 @@ async function checkOwner(listId, userId) {
 
 export async function POST(request, { params }) {
   const { id } = await params;
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   const err = await checkOwner(id, user.id);
   if (err) return Response.json({ error: err.error }, { status: err.status });
@@ -51,8 +42,9 @@ export async function POST(request, { params }) {
 
 export async function DELETE(request, { params }) {
   const { id } = await params;
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   const err = await checkOwner(id, user.id);
   if (err) return Response.json({ error: err.error }, { status: err.status });

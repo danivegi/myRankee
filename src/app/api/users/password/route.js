@@ -1,23 +1,14 @@
-import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { bumpTokenVersion, requireUser, signToken } from '@/lib/auth';
 import pool from '@/lib/db';
 import { checkPassword } from '@/lib/password';
 import { logSecurityEvent } from '@/lib/init-auth';
 import { checkRateLimit, getIp, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
 
-function getUser(request) {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  try {
-    return jwt.verify(auth.slice(7), process.env.JWT_SECRET);
-  } catch {
-    return null;
-  }
-}
-
 export async function PUT(request) {
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   const ip = getIp(request);
   const rl = checkRateLimit(writeLimitKey(request, user), LIMITS.write.limit, LIMITS.write.windowMs);
@@ -48,8 +39,13 @@ export async function PUT(request) {
 
   const hash = await bcrypt.hash(new_password, 10);
   await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, user.id]);
+  // Every other session ends; this device gets a new token so it stays signed in.
+  const tokenVersion = await bumpTokenVersion(user.id);
 
   logSecurityEvent({ userId: user.id, eventType: 'password_change', ip });
 
-  return Response.json({ message: 'Contraseña actualizada correctamente' });
+  return Response.json({
+    message: 'Contraseña actualizada correctamente',
+    token: signToken({ id: user.id, token_version: tokenVersion }),
+  });
 }

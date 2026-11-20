@@ -1,17 +1,11 @@
-import jwt from 'jsonwebtoken';
+import { optionalUser } from '@/lib/auth';
 import pool from '@/lib/db';
 
 export async function GET(request, { params }) {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return Response.json({ favorited: false });
-
-  let userId;
-  try {
-    const decoded = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
-    userId = decoded.id;
-  } catch {
-    return Response.json({ favorited: false });
-  }
+  // Signed out (or a dead token): not favorited, like before.
+  const viewer = await optionalUser(request);
+  if (!viewer) return Response.json({ favorited: false });
+  const userId = viewer.id;
 
   const { igdb_game_id } = await params;
 

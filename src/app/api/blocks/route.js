@@ -1,21 +1,15 @@
-import jwt from 'jsonwebtoken';
+import { requireUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { ensureBlocksTable } from '@/lib/blocks';
-
-function getUser(request) {
-  const h = request.headers.get('authorization');
-  if (!h?.startsWith('Bearer ')) return null;
-  try { return jwt.verify(h.slice(7), process.env.JWT_SECRET); }
-  catch { return null; }
-}
 
 /**
  * The users I blocked, most recent first: [{ username, nombre, apellido, avatar_url, blocked_at }].
  * (Not under /api/users/…: a static segment there would shadow a user with that username.)
  */
 export async function GET(request) {
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   await ensureBlocksTable();
   const res = await pool.query(

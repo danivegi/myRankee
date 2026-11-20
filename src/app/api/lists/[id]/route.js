@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { optionalUser, requireUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { queryIGDB, coverUrl } from '@/lib/igdb';
 import { checkRateLimit, getIp, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
@@ -10,16 +10,6 @@ import { sanitizeText } from '@/lib/sanitize';
 const isValidId = (id) => /^\d+$/.test(String(id));
 const canSee = (list, user) => list.is_public || (user != null && Number(user.id) === Number(list.user_id));
 
-function getUser(request) {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  try {
-    return jwt.verify(auth.slice(7), process.env.JWT_SECRET);
-  } catch {
-    return null;
-  }
-}
-
 export async function GET(request, { params }) {
   const { id } = await params;
 
@@ -27,7 +17,7 @@ export async function GET(request, { params }) {
   const rl = checkRateLimit(`read:${ip}`, LIMITS.read.limit, LIMITS.read.windowMs);
   if (!rl.success) return rateLimitResponse(rl.retryAfter);
 
-  const user = getUser(request);
+  const user = await optionalUser(request);
 
   if (!isValidId(id)) return Response.json({ error: 'Lista no encontrada' }, { status: 404 });
 
@@ -114,8 +104,9 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   const { id } = await params;
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   const rl = checkRateLimit(writeLimitKey(request, user), LIMITS.write.limit, LIMITS.write.windowMs);
   if (!rl.success) return rateLimitResponse(rl.retryAfter);
@@ -141,8 +132,9 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   const { id } = await params;
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   const rl = checkRateLimit(writeLimitKey(request, user), LIMITS.write.limit, LIMITS.write.windowMs);
   if (!rl.success) return rateLimitResponse(rl.retryAfter);

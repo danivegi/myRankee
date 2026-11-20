@@ -1,22 +1,13 @@
-import jwt from 'jsonwebtoken';
+import { requireUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { interactionBlockedResponse } from '@/lib/blocks';
 import { createNotification, deleteToggleNotification } from '@/lib/init-notifications';
 
-function getUser(request) {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  try {
-    return jwt.verify(auth.slice(7), process.env.JWT_SECRET);
-  } catch {
-    return null;
-  }
-}
-
 export async function POST(request, { params }) {
   const { id } = await params;
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   if (!/^\d+$/.test(String(id))) return Response.json({ error: 'Lista no encontrada' }, { status: 404 });
   const listCheck = await pool.query('SELECT id, user_id, title, is_public FROM lists WHERE id = $1', [id]);

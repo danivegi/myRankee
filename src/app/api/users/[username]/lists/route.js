@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { optionalUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { queryIGDB, coverUrl } from '@/lib/igdb';
 
@@ -13,14 +13,7 @@ export async function GET(request, { params }) {
   const userId = userResult.rows[0].id;
 
   // If the viewer is the owner, include private lists too
-  let viewerUserId = null;
-  const auth = request.headers.get('authorization');
-  if (auth?.startsWith('Bearer ')) {
-    try {
-      const decoded = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
-      viewerUserId = decoded.id;
-    } catch {}
-  }
+  const viewerUserId = (await optionalUser(request))?.id ?? null;
   const isOwner = viewerUserId === userId;
 
   const result = await pool.query(

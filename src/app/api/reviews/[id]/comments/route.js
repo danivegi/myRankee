@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { optionalUser, requireUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { ensureCommentsTables } from '@/lib/comments';
 import { blockedIdsFor, interactionBlockedResponse } from '@/lib/blocks';
@@ -6,16 +6,6 @@ import { createNotification } from '@/lib/init-notifications';
 import { checkRateLimit, getIp, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
 import { validate, commentSchema, validationErrorResponse } from '@/lib/validation';
 import { sanitizeText } from '@/lib/sanitize';
-
-function getUser(request) {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  try {
-    return jwt.verify(auth.slice(7), process.env.JWT_SECRET);
-  } catch {
-    return null;
-  }
-}
 
 export async function GET(request, { params }) {
   const { id: reviewId } = await params;
@@ -27,7 +17,7 @@ export async function GET(request, { params }) {
   await ensureCommentsTables();
 
   // Comments by users the viewer blocked aren't shown to the viewer (optional token).
-  const hidden = await blockedIdsFor(getUser(request)?.id ?? null);
+  const hidden = await blockedIdsFor((await optionalUser(request))?.id ?? null);
 
   const res = await pool.query(
     `SELECT c.id, c.content, c.created_at,
@@ -44,8 +34,9 @@ export async function GET(request, { params }) {
 }
 
 export async function POST(request, { params }) {
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   const rl = checkRateLimit(writeLimitKey(request, user), LIMITS.write.limit, LIMITS.write.windowMs);
   if (!rl.success) return rateLimitResponse(rl.retryAfter);

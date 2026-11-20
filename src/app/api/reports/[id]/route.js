@@ -1,14 +1,7 @@
-import jwt from 'jsonwebtoken';
+import { requireAdmin } from '@/lib/auth';
 import pool from '@/lib/db';
 import { ensureReportsTables } from '@/lib/init-reports';
 import { createNotification } from '@/lib/init-notifications';
-
-function getUser(request) {
-  const h = request.headers.get('authorization');
-  if (!h?.startsWith('Bearer ')) return null;
-  try { return jwt.verify(h.slice(7), process.env.JWT_SECRET); }
-  catch { return null; }
-}
 
 const VALID_ACTIONS = new Set(['dismiss', 'warn', 'delete_content', 'suspend_user']);
 
@@ -42,11 +35,9 @@ const TARGET_TEXT = {
 export async function PUT(request, { params }) {
   await ensureReportsTables();
 
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
-
-  const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [user.id]);
-  if (!adminCheck.rows[0]?.is_admin) return Response.json({ error: 'Acceso denegado' }, { status: 403 });
+  const session = await requireAdmin(request, 'Acceso denegado');
+  if (session.response) return session.response;
+  const user = session.user;
 
   const { id } = await params;
   const body = await request.json().catch(() => ({}));

@@ -1,7 +1,7 @@
 import { queryIGDB, coverUrl } from '@/lib/igdb';
 import { translateGenre, translatePlatform } from '@/lib/translations';
 import pool from '@/lib/db';
-import jwt from 'jsonwebtoken';
+import { optionalUser } from '@/lib/auth';
 
 const PAGE_SIZE = 25;
 
@@ -120,15 +120,12 @@ export async function GET(request) {
   if (companyIds.length === 1)    baseClauses.push(`involved_companies.company = (${companyIds[0]})`);
   else if (companyIds.length > 1) baseClauses.push(`(${companyIds.map((id) => `involved_companies.company = (${id})`).join(' | ')})`);
 
-  function getUserId() {
-    const tok = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!tok) return null;
-    try { return jwt.verify(tok, process.env.JWT_SECRET).id; } catch { return null; }
-  }
+  // Backlog filters need the viewer (a dead token counts as signed out → 401 auth_required).
+  const getUserId = async () => (await optionalUser(request))?.id ?? null;
 
   // ── CASE A: backlog filter + NO search text → DB-first ────────────────────
   if (hasBacklogFilter && !hasText) {
-    const userId = getUserId();
+    const userId = await getUserId();
     if (!userId) {
       return Response.json(
         { error: 'auth_required', message: 'Inicia sesión para filtrar por backlog' },
@@ -194,7 +191,7 @@ export async function GET(request) {
     let games = merged.map(mapGame);
 
     if (hasBacklogFilter) {
-      const userId = getUserId();
+      const userId = await getUserId();
       if (userId) {
         const placeholders = backlogStatuses.map((_, i) => `$${i + 2}`).join(',');
         const res = await pool.query(

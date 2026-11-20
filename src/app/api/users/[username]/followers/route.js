@@ -1,17 +1,10 @@
-import jwt from 'jsonwebtoken';
+import { optionalUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { ensureFollowsTable } from '@/lib/init-follows';
 
-function getViewerId(request) {
-  const h = request.headers.get('authorization');
-  if (!h?.startsWith('Bearer ')) return null;
-  try { return jwt.verify(h.slice(7), process.env.JWT_SECRET).id; }
-  catch { return null; }
-}
-
 export async function GET(request, { params }) {
   const { username } = await params;
-  const viewerId = getViewerId(request);
+  const viewerId = (await optionalUser(request))?.id ?? null;
 
   try {
     await ensureFollowsTable();

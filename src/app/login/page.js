@@ -28,7 +28,9 @@ export default function LoginPage() {
   const captchaRef = useRef(null);
 
   useEffect(() => {
-    if (searchParams.get('expired') === 'true') {
+    if (searchParams.get('suspended') === 'true') {
+      setSuspended(searchParams.get('reason') || 'Violación de los términos de servicio.');
+    } else if (searchParams.get('expired') === 'true') {
       setBanner('Tu sesión ha caducado. Inicia sesión de nuevo.');
     } else if (searchParams.get('verified') === 'true') {
       setBanner('¡Cuenta verificada! Ya puedes iniciar sesión.');

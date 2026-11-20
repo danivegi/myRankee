@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { optionalUser } from '@/lib/auth';
 import { blockedIdsFor, ensureBlocksTable } from '@/lib/blocks';
 import pool from '@/lib/db';
 import { queryIGDB, coverUrl } from '@/lib/igdb';
@@ -43,14 +43,8 @@ const FEED_SELECT = `
 export async function GET(request) {
   const tab = request.nextUrl.searchParams.get('tab') ?? 'reciente';
 
-  // Extract optional viewer from auth header
-  let viewerId = null;
-  const authHeader = request.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    try {
-      viewerId = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET).id;
-    } catch { /* invalid token — treat as unauthenticated */ }
-  }
+  // Optional viewer (a dead token counts as signed out).
+  const viewerId = (await optionalUser(request))?.id ?? null;
 
   try {
     await ensureFollowsTable();

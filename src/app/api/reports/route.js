@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { requireAdmin, requireUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { ensureReportsTables } from '@/lib/init-reports';
 import { checkRateLimit, getIp, rateLimitResponse } from '@/lib/rate-limit';
@@ -6,18 +6,12 @@ import { checkRateLimit, getIp, rateLimitResponse } from '@/lib/rate-limit';
 const VALID_TYPES   = new Set(['review', 'comment', 'list', 'user']);
 const VALID_REASONS = new Set(['spam', 'inappropriate', 'harassment', 'fake_info', 'copyright', 'other']);
 
-function getUser(request) {
-  const h = request.headers.get('authorization');
-  if (!h?.startsWith('Bearer ')) return null;
-  try { return jwt.verify(h.slice(7), process.env.JWT_SECRET); }
-  catch { return null; }
-}
-
 export async function POST(request) {
   await ensureReportsTables();
 
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   const ip = getIp(request);
   const rl = checkRateLimit(`report:${ip}`, 10, 60_000 * 60);
@@ -75,12 +69,8 @@ export async function GET(request) {
   try {
     await ensureReportsTables();
 
-    const user = getUser(request);
-    if (!user) return Response.json({ error: 'No autorizado' }, { status: 401 });
-
-    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [user.id]);
-    const isAdmin = adminCheck.rows[0]?.is_admin ?? false;
-    if (!isAdmin) return Response.json({ error: 'No tienes permisos de administrador' }, { status: 403 });
+    const session = await requireAdmin(request, 'No tienes permisos de administrador');
+    if (session.response) return session.response;
 
     const status = request.nextUrl.searchParams.get('status') ?? 'pending';
     const page   = Math.max(1, parseInt(request.nextUrl.searchParams.get('page') ?? '1', 10));

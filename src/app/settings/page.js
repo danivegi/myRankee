@@ -687,7 +687,7 @@ function SocialLinksSection({ token, username }) {
 
 // ── Password section ───────────────────────────────────────────────────────────
 
-function PasswordSection({ token }) {
+function PasswordSection({ token, onToken }) {
   const { addToast } = useToast();
   const [form,   setForm]   = useState({ current: '', next: '', confirm: '' });
   const [saving, setSaving] = useState(false);
@@ -711,7 +711,12 @@ function PasswordSection({ token }) {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Error al cambiar la contraseña'); addToast(data.error ?? 'Error al cambiar la contraseña', 'error'); }
-      else { setForm({ current: '', next: '', confirm: '' }); addToast('¡Contraseña cambiada correctamente!'); }
+      else {
+        // Other devices are signed out; this one gets a new token so it stays signed in.
+        if (data.token) { localStorage.setItem('token', data.token); onToken?.(data.token); }
+        setForm({ current: '', next: '', confirm: '' });
+        addToast('¡Contraseña cambiada correctamente!');
+      }
     } catch {
       setError('Error de conexión');
     } finally {
@@ -1010,7 +1015,7 @@ function DataExportSection({ token }) {
 
 // ── Danger / delete section ────────────────────────────────────────────────────
 
-function DangerSection({ token, username, onLogout }) {
+function DangerSection({ token, username, onLogout, onToken }) {
   const router = useRouter();
   const { addToast } = useToast();
 
@@ -1022,6 +1027,26 @@ function DangerSection({ token, username, onLogout }) {
   const [deleteError,  setDeleteError]  = useState('');
 
   const canDelete = confirmInput === username && password.length >= 1 && confirmed;
+
+  const [logoutAllOpen, setLogoutAllOpen] = useState(false);
+  const [loggingOutAll, setLoggingOutAll] = useState(false);
+
+  async function handleLogoutAll() {
+    setLoggingOutAll(true);
+    try {
+      const res  = await fetch('/api/auth/logout-all', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { addToast(data.error ?? 'No se ha podido cerrar la sesión en los demás dispositivos', 'error'); return; }
+      // Every other session ends; this device keeps going with the new token.
+      if (data.token) { localStorage.setItem('token', data.token); onToken?.(data.token); }
+      setLogoutAllOpen(false);
+      addToast(data.message ?? 'Se ha cerrado la sesión en todos los demás dispositivos.');
+    } catch {
+      addToast('Error de conexión', 'error');
+    } finally {
+      setLoggingOutAll(false);
+    }
+  }
 
   function openModal()  { setShowModal(true); setConfirmInput(''); setPassword(''); setConfirmed(false); setDeleteError(''); }
   function closeModal() { if (deleting) return; setShowModal(false); }
@@ -1065,6 +1090,21 @@ function DangerSection({ token, username, onLogout }) {
 
         <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-red-900/40 bg-[#110808]">
           <div>
+            <p className="text-white text-sm font-semibold">Cerrar sesión en todos los dispositivos</p>
+            <p className="text-[#71717A] text-xs mt-0.5 max-w-sm leading-relaxed">
+              Cierra tu sesión en todos los demás navegadores y en la app. En este dispositivo seguirás conectado.
+            </p>
+          </div>
+          <button
+            onClick={() => setLogoutAllOpen(true)}
+            className="flex-shrink-0 px-5 py-2 rounded-xl border border-red-600 text-red-400 text-sm font-semibold hover:bg-red-600 hover:text-white transition-colors cursor-pointer"
+          >
+            Cerrar en todos
+          </button>
+        </div>
+
+        <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-red-900/40 bg-[#110808]">
+          <div>
             <p className="text-white text-sm font-semibold">Eliminar mi cuenta</p>
             <p className="text-[#71717A] text-xs mt-0.5 max-w-sm leading-relaxed">
               Acción irreversible. Se eliminarán tu perfil, reseñas, listas, comentarios y todos tus datos.
@@ -1075,6 +1115,40 @@ function DangerSection({ token, username, onLogout }) {
           </button>
         </div>
       </Section>
+
+      {logoutAllOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+          onClick={(e) => { if (e.target === e.currentTarget && !loggingOutAll) setLogoutAllOpen(false); }}
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-[#1A1A1A] bg-[#111111] p-6 flex flex-col gap-5">
+            <div className="flex flex-col gap-2">
+              <h3 className="text-white font-semibold">¿Cerrar sesión en todos los dispositivos?</h3>
+              <p className="text-[#9CA3AF] text-sm leading-relaxed">
+                Tendrás que volver a iniciar sesión en tus otros navegadores y en la app. Este dispositivo seguirá conectado.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setLogoutAllOpen(false)}
+                disabled={loggingOutAll}
+                className="flex-1 rounded-xl border border-[#1A1A1A] text-[#9CA3AF] text-sm py-2.5 hover:text-white transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleLogoutAll}
+                disabled={loggingOutAll}
+                className="flex-1 rounded-xl text-sm py-2.5 font-medium transition-all disabled:opacity-40 cursor-pointer"
+                style={{ backgroundColor: '#EF4444', color: '#fff' }}
+              >
+                {loggingOutAll ? 'Cerrando…' : 'Cerrar en todos'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div
@@ -1278,7 +1352,7 @@ function SettingsContent() {
                   token={token}
                   currentEmail={user?.email ?? ''}
                 />
-                <PasswordSection token={token} />
+                <PasswordSection token={token} onToken={setToken} />
               </>
             )}
 
@@ -1293,7 +1367,7 @@ function SettingsContent() {
             {activeTab === 'peligro' && (
               <>
                 <DataExportSection token={token} />
-                <DangerSection token={token} username={user?.username ?? ''} onLogout={handleLogout} />
+                <DangerSection token={token} username={user?.username ?? ''} onLogout={handleLogout} onToken={setToken} />
               </>
             )}
           </div>

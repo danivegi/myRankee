@@ -249,8 +249,23 @@ export default function Navbar() {
       }
       try {
         const r = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
-        const data = r.ok ? await r.json() : null;
-        setUser(data?.user ?? null);
+        const data = await r.json().catch(() => null);
+        if (r.status === 401) {
+          // Expired, revoked (password change, "cerrar sesión en todos") or deleted account.
+          localStorage.removeItem('token');
+          setUser(null);
+          router.push('/login?expired=true');
+          return;
+        }
+        if (r.status === 403 && data?.suspended) {
+          localStorage.removeItem('token');
+          setUser(null);
+          router.push(`/login?suspended=true&reason=${encodeURIComponent(data.suspended_reason ?? '')}`);
+          return;
+        }
+        // Sliding renewal: /me hands out a fresh token once the current one is a week old.
+        if (r.ok && data?.token) localStorage.setItem('token', data.token);
+        setUser(r.ok ? data?.user ?? null : null);
       } catch {
         setUser(null);
       }

@@ -1,14 +1,7 @@
-import jwt from 'jsonwebtoken';
+import { requireUser } from '@/lib/auth';
 import pool from '@/lib/db';
 
 const PLATFORMS = new Set(['twitter', 'instagram', 'twitch', 'youtube', 'steam', 'discord', 'tiktok']);
-
-function getUser(request) {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  try { return jwt.verify(auth.slice(7), process.env.JWT_SECRET); }
-  catch { return null; }
-}
 
 function isValidUrl(str) {
   try {
@@ -18,8 +11,9 @@ function isValidUrl(str) {
 }
 
 export async function PUT(request) {
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   const body = await request.json().catch(() => ({}));
 

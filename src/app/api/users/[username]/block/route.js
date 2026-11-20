@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { requireUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { ensureBlocksTable } from '@/lib/blocks';
 import { checkRateLimit, rateLimitResponse, writeLimitKey } from '@/lib/rate-limit';
@@ -6,16 +6,10 @@ import { checkRateLimit, rateLimitResponse, writeLimitKey } from '@/lib/rate-lim
 // Blocking rewrites follows and notifications: 30 block/unblock requests per user per hour.
 const BLOCK_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 };
 
-function getUser(request) {
-  const h = request.headers.get('authorization');
-  if (!h?.startsWith('Bearer ')) return null;
-  try { return jwt.verify(h.slice(7), process.env.JWT_SECRET); }
-  catch { return null; }
-}
-
 async function resolve(request, params) {
-  const user = getUser(request);
-  if (!user) return { error: Response.json({ error: 'No autenticado' }, { status: 401 }) };
+  const session = await requireUser(request);
+  if (session.response) return { error: session.response };
+  const user = session.user;
 
   const rl = checkRateLimit(`block:${writeLimitKey(request, user)}`, BLOCK_LIMIT.limit, BLOCK_LIMIT.windowMs);
   if (!rl.success) return { error: rateLimitResponse(rl.retryAfter) };

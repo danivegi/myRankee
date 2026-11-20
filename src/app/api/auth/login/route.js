@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { ensureTokenVersionColumn, signToken } from '@/lib/auth';
 import pool from '@/lib/db';
 import { ensureAuthTables, logSecurityEvent } from '@/lib/init-auth';
 import { validate, userLoginSchema, validationErrorResponse } from '@/lib/validation';
@@ -88,9 +88,10 @@ export async function POST(request) {
   }
 
   // Look up by email or username
+  await ensureTokenVersionColumn();
   const result = await pool.query(
     `SELECT id, nombre, apellido, username, email, password_hash, avatar_url, bio, created_at,
-            email_verified, is_suspended, suspended_reason
+            email_verified, is_suspended, suspended_reason, token_version
      FROM users
      WHERE ${isEmail ? 'LOWER(email) = $1' : 'LOWER(username) = $1'}`,
     [logIdentifier]
@@ -149,7 +150,8 @@ export async function POST(request) {
     metadata: { identifier: logIdentifier },
   });
 
-  const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  const token = signToken(user);
+  const { token_version: _tokenVersion, ...publicUser } = user;
 
-  return Response.json({ token, user: sanitizeUser(user, { includeEmail: true }) });
+  return Response.json({ token, user: sanitizeUser(publicUser, { includeEmail: true }) });
 }

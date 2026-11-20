@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { renewedToken, resolveSession, SESSION_EXPIRED } from '@/lib/auth';
 import pool from '@/lib/db';
 import { sanitizeUser } from '@/lib/sanitize';
 
@@ -9,33 +9,30 @@ export async function GET(request) {
     return Response.json({ error: 'Token no proporcionado' }, { status: 401 });
   }
 
-  let payload;
-  try {
-    payload = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET);
-  } catch {
-    return Response.json({ error: 'Token inválido o expirado' }, { status: 401 });
+  // Bad/expired/revoked token or deleted account → 401 (it used to be a 404 for deleted accounts),
+  // so both clients sign out.
+  const session = await resolveSession(request);
+  if (session.status === 'invalid') {
+    return Response.json({ error: SESSION_EXPIRED }, { status: 401 });
   }
-
-  const result = await pool.query(
-    'SELECT id, nombre, apellido, username, email, avatar_url, bio, banner_url, banner_position, created_at, is_admin, is_suspended, suspended_reason FROM users WHERE id = $1',
-    [payload.id]
-  );
-
-  if (!result.rows.length) {
-    return Response.json({ error: 'Usuario no encontrado' }, { status: 404 });
-  }
-
-  const user = result.rows[0];
-
-  if (user.is_suspended) {
+  if (session.status === 'suspended') {
     return Response.json(
       {
         error: 'Tu cuenta ha sido suspendida.',
-        suspended_reason: user.suspended_reason ?? 'Violación de los términos de servicio.',
+        suspended: true,
+        suspended_reason: session.user.suspended_reason ?? 'Violación de los términos de servicio.',
       },
       { status: 403 }
     );
   }
 
-  return Response.json({ user: sanitizeUser(user, { includeEmail: true }) });
+  const result = await pool.query(
+    'SELECT id, nombre, apellido, username, email, avatar_url, bio, banner_url, banner_position, created_at, is_admin, is_suspended, suspended_reason FROM users WHERE id = $1',
+    [session.user.id]
+  );
+  if (!result.rows.length) return Response.json({ error: SESSION_EXPIRED }, { status: 401 });
+
+  // Sliding renewal: a token older than 7 days gets a fresh 30-day one.
+  const token = renewedToken(session);
+  return Response.json({ user: sanitizeUser(result.rows[0], { includeEmail: true }), ...(token ? { token } : {}) });
 }

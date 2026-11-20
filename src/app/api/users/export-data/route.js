@@ -1,17 +1,11 @@
-import jwt from 'jsonwebtoken';
+import { requireUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { checkRateLimit, getIp, rateLimitResponse } from '@/lib/rate-limit';
 
-function getUser(request) {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  try { return jwt.verify(auth.slice(7), process.env.JWT_SECRET); }
-  catch { return null; }
-}
-
 export async function GET(request) {
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   const ip = getIp(request);
   const rl = checkRateLimit(`export:${ip}`, 5, 60_000 * 60);

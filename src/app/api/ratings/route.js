@@ -1,20 +1,10 @@
-import jwt from 'jsonwebtoken';
+import { optionalUser, requireUser } from '@/lib/auth';
 import pool from '@/lib/db';
 import { checkAndUnlockAchievements } from '@/lib/achievements';
 import { checkRateLimit, rateLimitResponse, LIMITS, writeLimitKey } from '@/lib/rate-limit';
 
-function getUser(request) {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  try {
-    return jwt.verify(auth.slice(7), process.env.JWT_SECRET);
-  } catch {
-    return null;
-  }
-}
-
 export async function GET(request) {
-  const user = getUser(request);
+  const user = await optionalUser(request);
   if (!user) return Response.json({ score: null });
 
   const igdb_game_id = request.nextUrl.searchParams.get('igdb_game_id');
@@ -28,8 +18,9 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  const user = getUser(request);
-  if (!user) return Response.json({ error: 'No autenticado' }, { status: 401 });
+  const session = await requireUser(request);
+  if (session.response) return session.response;
+  const user = session.user;
 
   const rl = checkRateLimit(writeLimitKey(request, user), LIMITS.write.limit, LIMITS.write.windowMs);
   if (!rl.success) return rateLimitResponse(rl.retryAfter);
