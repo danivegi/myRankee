@@ -21,8 +21,13 @@ export async function GET() {
       name:         g.name,
       cover:        coverUrl(g.cover?.image_id, 'cover_big'),
       genres:       g.genres?.map(gn => translateGenre(gn.name)) ?? [],
+      // Preformatted Spanish text (the web shows it as is); IGDB dates are UTC midnights.
       release_date: g.first_release_date
-        ? new Date(g.first_release_date * 1000).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+        ? new Date(g.first_release_date * 1000).toLocaleDateString('es-ES', { timeZone: 'UTC', day: 'numeric', month: 'short' })
+        : null,
+      // ISO 8601 calendar date (YYYY-MM-DD) for clients that format it themselves.
+      release_date_iso: g.first_release_date
+        ? new Date(g.first_release_date * 1000).toISOString().slice(0, 10)
         : null,
     }));
 

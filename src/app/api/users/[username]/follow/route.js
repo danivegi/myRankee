@@ -13,7 +13,7 @@ export async function GET(request, { params }) {
 
   await ensureFollowsTable();
 
-  const targetRes = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+  const targetRes = await pool.query('SELECT id FROM users WHERE lower(username) = lower($1)', [username]);
   if (!targetRes.rows.length) return Response.json({ error: 'Not found' }, { status: 404 });
 
   const res = await pool.query(
@@ -35,7 +35,7 @@ export async function POST(request, { params }) {
   try {
     await ensureFollowsTable();
 
-    const targetRes = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    const targetRes = await pool.query('SELECT id, username FROM users WHERE lower(username) = lower($1)', [username]);
     if (!targetRes.rows.length)
       return Response.json({ error: 'Usuario no encontrado' }, { status: 404 });
 
@@ -80,7 +80,7 @@ export async function POST(request, { params }) {
           await pool.query(
             `INSERT INTO activity (user_id, igdb_game_id, type, metadata)
              VALUES ($1, NULL, 'follow', $2)`,
-            [followerId, JSON.stringify({ follower_username: payload.username ?? '', followed_username: username })]
+            [followerId, JSON.stringify({ follower_username: payload.username ?? '', followed_username: targetRes.rows[0].username })]
           );
         } catch { /* igdb_game_id may be NOT NULL — non-fatal */ }
         try {

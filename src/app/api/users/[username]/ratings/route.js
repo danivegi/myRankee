@@ -6,7 +6,7 @@ export async function GET(request, { params }) {
 
   // Get the user id
   const userResult = await pool.query(
-    'SELECT id FROM users WHERE username = $1',
+    'SELECT id FROM users WHERE lower(username) = lower($1)',
     [username]
   );
 

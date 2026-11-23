@@ -15,7 +15,7 @@ async function resolve(request, params) {
   if (!rl.success) return { error: rateLimitResponse(rl.retryAfter) };
 
   const { username } = await params;
-  const target = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+  const target = await pool.query('SELECT id FROM users WHERE lower(username) = lower($1)', [username]);
   if (!target.rows.length) return { error: Response.json({ error: 'Usuario no encontrado' }, { status: 404 }) };
 
   const me = Number(user.id);

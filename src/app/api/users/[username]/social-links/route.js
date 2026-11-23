@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 export async function GET(request, { params }) {
   const { username } = await params;
 
-  const userRes = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+  const userRes = await pool.query('SELECT id FROM users WHERE lower(username) = lower($1)', [username]);
   if (!userRes.rows.length) return Response.json({ error: 'Not found' }, { status: 404 });
 
   const userId = userRes.rows[0].id;

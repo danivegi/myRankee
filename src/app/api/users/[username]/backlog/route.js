@@ -4,6 +4,22 @@ import { queryIGDB, coverUrl } from '@/lib/igdb';
 const VALID_STATUSES = ['jugado', 'jugando', 'pendiente'];
 const VALID_SORTS    = ['recent', 'old', 'az', 'za', 'year'];
 
+const byName = (a, b) => a.game.name.localeCompare(b.game.name, 'es', { sensitivity: 'base' });
+
+/**
+ * Name and year come from IGDB, so those sorts run here after the merge. Items IGDB couldn't
+ * describe (no name / no year) go last; ties keep the date order from the query (newest first).
+ */
+function sortItems(items, sort) {
+  if (sort === 'recent' || sort === 'old') return items;
+  const known   = items.filter((i) => (sort === 'year' ? i.game.year != null : !!i.game.name));
+  const unknown = items.filter((i) => !known.includes(i));
+  if (sort === 'az') known.sort(byName);
+  else if (sort === 'za') known.sort((a, b) => byName(b, a));
+  else known.sort((a, b) => b.game.year - a.game.year); // year: newest release first
+  return [...known, ...unknown];
+}
+
 export async function GET(request, { params }) {
   const { username } = await params;
   const sp     = request.nextUrl.searchParams;
@@ -17,7 +33,7 @@ export async function GET(request, { params }) {
 
   // Resolve user
   const userRes = await pool.query(
-    'SELECT id FROM users WHERE username = $1',
+    'SELECT id FROM users WHERE lower(username) = lower($1)',
     [username]
   );
   if (!userRes.rows.length)
@@ -43,8 +59,8 @@ export async function GET(request, { params }) {
     qParams.push(status);
   }
 
-  // DB-level sort only for date-based; name/year sorted client-side after IGDB merge
-  const dbOrder = sort === 'old' ? 'b.updated_at ASC' : 'b.updated_at DESC';
+  // Date sorts in the DB; name/year after the IGDB merge (sortItems). Ties: newest entry first.
+  const dbOrder = sort === 'old' ? 'b.updated_at ASC, b.igdb_game_id ASC' : 'b.updated_at DESC, b.igdb_game_id DESC';
 
   const backlogRes = await pool.query(
     `SELECT b.igdb_game_id, b.status, b.updated_at AS added_at
@@ -85,5 +101,5 @@ export async function GET(request, { params }) {
     game:         gameMap[e.igdb_game_id] ?? { name: null, cover: null, year: null, genres: [] },
   }));
 
-  return Response.json({ items, counts });
+  return Response.json({ items: sortItems(items, sort), counts });
 }

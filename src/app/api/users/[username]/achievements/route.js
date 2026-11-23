@@ -7,7 +7,7 @@ export async function GET(request, { params }) {
 
   const viewerId = (await optionalUser(request))?.id ?? null;
 
-  const userRes = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+  const userRes = await pool.query('SELECT id FROM users WHERE lower(username) = lower($1)', [username]);
   if (!userRes.rows.length) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 });
   const targetId = userRes.rows[0].id;
   const isOwner = viewerId === targetId;
@@ -52,24 +52,8 @@ export async function GET(request, { params }) {
     const unlockedMap = {};
     for (const r of unlockedRes.rows) unlockedMap[r.code] = r.unlocked_at;
 
-    // Auto-unlock any achievements that have reached their threshold but
-    // weren't recorded yet (e.g. first load after deployments, manual DB seeding)
-    const toAutoUnlock = allAch.rows.filter(
-      (a) => !unlockedMap[a.code] && (counts[a.requirement_type] ?? 0) >= a.requirement_value
-    );
-    if (toAutoUnlock.length > 0) {
-      const now = new Date().toISOString();
-      await Promise.all(
-        toAutoUnlock.map((a) =>
-          pool.query(
-            `INSERT INTO user_achievements (user_id, achievement_id)
-             VALUES ($1, $2) ON CONFLICT (user_id, achievement_id) DO NOTHING`,
-            [targetId, a.id]
-          ).catch(() => {})
-        )
-      );
-      for (const a of toAutoUnlock) unlockedMap[a.code] = now;
-    }
+    // Read-only: achievements are unlocked by the actions that earn them (checkAndUnlockAchievements
+    // after rating, reviewing, backlog, creating a list, receiving a like or a follow).
 
     const achievements = allAch.rows.map((a) => {
       const unlocked = !!unlockedMap[a.code];

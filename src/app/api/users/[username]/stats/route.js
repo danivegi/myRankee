@@ -7,7 +7,7 @@ export async function GET(request, { params }) {
   const { username } = await params;
 
   const userResult = await pool.query(
-    'SELECT id FROM users WHERE username = $1',
+    'SELECT id FROM users WHERE lower(username) = lower($1)',
     [username]
   );
   if (!userResult.rows.length)

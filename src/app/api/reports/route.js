@@ -59,6 +59,7 @@ export async function POST(request) {
     );
     return Response.json({ message: 'Reporte enviado' }, { status: 201 });
   } catch (err) {
+    // reports_pending_unique: this user already has a PENDING report on it (reviewed/dismissed ones don't count).
     if (err.code === '23505') return Response.json({ error: 'Ya has reportado este contenido' }, { status: 409 });
     console.error('[reports POST]', err);
     return Response.json({ error: 'Error al enviar el reporte' }, { status: 500 });

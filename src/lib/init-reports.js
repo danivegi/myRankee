@@ -38,12 +38,18 @@ export async function ensureReportsTables() {
         reviewed_by   INTEGER REFERENCES users(id) ON DELETE SET NULL,
         reviewed_at   TIMESTAMP,
         action_taken  VARCHAR(30),
-        created_at    TIMESTAMP DEFAULT NOW(),
-        UNIQUE (reporter_id, target_type, target_id)
+        created_at    TIMESTAMP DEFAULT NOW()
       )
     `);
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status, created_at DESC)
+    `);
+    // One PENDING report per reporter and target: once a moderator reviews or dismisses it, the same
+    // user can report that content again. Same SQL as the migration run in Supabase.
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS reports_pending_unique
+        ON reports (reporter_id, target_type, target_id)
+        WHERE status = 'pending'
     `);
 
     ready = true;

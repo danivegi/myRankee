@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -773,6 +773,7 @@ export default function SearchPage() {
   const [searchError,      setSearchError]      = useState(null); // e.g. 'auth_required'
   const [page,             setPage]             = useState(1);
   const [totalCount,       setTotalCount]       = useState(null);
+  const [hasMore,          setHasMore]          = useState(false);
   const resultsTopRef = useRef(null);
 
   const activeFilterCount =
@@ -889,9 +890,11 @@ export default function SearchPage() {
           setSearchError(data?.error ?? 'error');
           setGameResults([]);
           setTotalCount(null);
+          setHasMore(false);
         } else {
           setGameResults(data.games ?? []);
           setTotalCount(data.total ?? null);
+          setHasMore(data.has_more ?? (data.games?.length === 25));
         }
       } catch {
         setGameResults([]);
@@ -920,15 +923,8 @@ export default function SearchPage() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Client-side sort derived from gameResults
-  const sortedGameResults = useMemo(() => {
-    if (!gameResults.length) return gameResults;
-    switch (activeSort) {
-      case 'Nombre':    return [...gameResults].sort((a, b) => a.name.localeCompare(b.name, 'es'));
-      case 'Recientes': return [...gameResults].sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
-      default:          return gameResults;
-    }
-  }, [gameResults, activeSort]);
+  // The server sorts the whole result set (sort_by) before paging: results are shown as they come.
+  const sortedGameResults = gameResults;
 
   function handleTabChange(tab) {
     setActiveTab(tab);
@@ -1303,8 +1299,8 @@ export default function SearchPage() {
                     />
                   )}
 
-                  {/* Simplified prev/next (text searches, total unknown) */}
-                  {totalCount == null && (page > 1 || sortedGameResults.length === 25) && (
+                  {/* Simplified prev/next (total unknown, e.g. IGDB count failed) */}
+                  {totalCount == null && (page > 1 || hasMore) && (
                     <div className="flex items-center justify-center gap-3 pt-8 pb-4">
                       <button
                         onClick={() => handlePageChange(page - 1)}
@@ -1316,7 +1312,7 @@ export default function SearchPage() {
                       <span className="text-[#71717A] text-sm font-mono">Página {page}</span>
                       <button
                         onClick={() => handlePageChange(page + 1)}
-                        disabled={sortedGameResults.length < 25}
+                        disabled={!hasMore}
                         className="px-4 py-2 rounded-lg border border-[#1A1A1A] text-[#71717A] text-sm hover:text-white hover:border-[#3F3F46] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         Siguiente →

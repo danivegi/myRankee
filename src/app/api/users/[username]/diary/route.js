@@ -8,7 +8,7 @@ export async function GET(request, { params }) {
   const limit = 50;
   const offset = (page - 1) * limit;
 
-  const userResult = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+  const userResult = await pool.query('SELECT id FROM users WHERE lower(username) = lower($1)', [username]);
   if (!userResult.rows.length)
     return Response.json({ error: 'Usuario no encontrado' }, { status: 404 });
 

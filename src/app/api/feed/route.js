@@ -21,6 +21,10 @@ function timeAgo(date) {
   return `hace ${weeks} semana${weeks > 1 ? 's' : ''}`;
 }
 
+// One page = PAGE_SIZE cards. A card is everything one user did on one game (rating + review +
+// backlog), placed at its latest activity.
+const PAGE_SIZE = 20;
+
 // Includes base WHERE so downstream queries extend with AND
 const FEED_SELECT = `
   SELECT a.id, a.user_id, a.igdb_game_id, a.type, a.metadata, a.created_at,
@@ -40,11 +44,92 @@ const FEED_SELECT = `
   WHERE a.igdb_game_id IS NOT NULL
 `;
 
+// ── Cursor (opaque to clients) ────────────────────────────────────────────────
+// reciente / siguiendo: keyset { t: latest activity time (Postgres text, full precision), id }.
+// popular: { o: offset } (its order depends on like counts, which keep changing).
+
+function encodeCursor(value) {
+  return Buffer.from(JSON.stringify(value)).toString('base64url');
+}
+
+function decodeCursor(raw, tab) {
+  try {
+    const c = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));
+    if (tab === 'popular') return Number.isInteger(c?.o) && c.o > 0 ? c : null;
+    return typeof c?.t === 'string' && c.t.length <= 40 && Number.isInteger(c?.id) ? c : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The page's cards: [{ user_id, igdb_game_id, last_at_text, last_id }] in feed order, PAGE_SIZE + 1
+ * of them (the extra one only tells whether there's a next page).
+ */
+async function pageCards({ tab, viewerId, hidden, cursor }) {
+  const params = [hidden];
+  const where  = ['a.igdb_game_id IS NOT NULL', 'a.user_id <> ALL($1::int[])'];
+  let having = '';
+  let order;
+  let offset = '';
+  let likesJoin = '';
+  let likesCol = '';
+
+  if (tab === 'popular') {
+    where.push(`a.created_at > NOW() - INTERVAL '7 days'`);
+    likesJoin = `
+      LEFT JOIN reviews r ON r.id = (a.metadata->>'review_id')::int
+      LEFT JOIN (SELECT review_id, COUNT(*) AS like_count FROM review_likes GROUP BY review_id) lc
+        ON lc.review_id = r.id`;
+    likesCol = ', MAX(COALESCE(lc.like_count, 0))::int AS card_likes';
+    order = 'card_likes DESC, MAX(a.created_at) DESC, MAX(a.id) DESC';
+    if (cursor) offset = `OFFSET ${cursor.o}`;
+  } else {
+    if (tab === 'siguiendo') {
+      params.push(viewerId);
+      where.push(`a.user_id IN (SELECT followed_id FROM follows WHERE follower_id = $${params.length})`);
+    }
+    order = 'MAX(a.created_at) DESC, MAX(a.id) DESC';
+    if (cursor) {
+      params.push(cursor.t, cursor.id);
+      const t = `$${params.length - 1}`;
+      const id = `$${params.length}`;
+      having = `HAVING MAX(a.created_at) < ${t} OR (MAX(a.created_at) = ${t} AND MAX(a.id) < ${id})`;
+    }
+  }
+
+  const res = await pool.query(
+    `SELECT a.user_id, a.igdb_game_id,
+            MAX(a.created_at)::text AS last_at_text,
+            MAX(a.id)               AS last_id
+            ${likesCol}
+     FROM activity a
+     JOIN users u ON u.id = a.user_id
+     ${likesJoin}
+     WHERE ${where.join(' AND ')}
+     GROUP BY a.user_id, a.igdb_game_id
+     ${having}
+     ORDER BY ${order}
+     LIMIT ${PAGE_SIZE + 1} ${offset}`,
+    params
+  );
+  return res.rows;
+}
+
 export async function GET(request) {
-  const tab = request.nextUrl.searchParams.get('tab') ?? 'reciente';
+  const sp  = request.nextUrl.searchParams;
+  const tab = sp.get('tab') ?? 'reciente';
 
   // Optional viewer (a dead token counts as signed out).
   const viewerId = (await optionalUser(request))?.id ?? null;
+
+  // Without a viewer, "siguiendo" is the "reciente" feed (as before).
+  const feedTab = tab === 'popular' ? 'popular' : tab === 'siguiendo' && viewerId ? 'siguiendo' : 'reciente';
+
+  const rawCursor = sp.get('cursor');
+  const cursor = rawCursor ? decodeCursor(rawCursor, feedTab) : null;
+  if (rawCursor && !cursor) return Response.json({ error: 'Cursor inválido' }, { status: 400 });
+  const firstPage = !cursor;
 
   try {
     await ensureFollowsTable();
@@ -52,85 +137,85 @@ export async function GET(request) {
     await ensureBlocksTable();
     const hidden = await blockedIdsFor(viewerId);
 
-    // ── Activity feed ─────────────────────────────────────────────────────────
-    let activityRows;
     let no_follows = false;
-
-    if (tab === 'popular') {
-      const res = await pool.query(
-        `${FEED_SELECT}
-         AND a.created_at > NOW() - INTERVAL '7 days'
-         AND a.user_id <> ALL($1::int[])
-         ORDER BY likes_count DESC, a.created_at DESC
-         LIMIT 60`,
-        [hidden]
-      );
-      activityRows = res.rows;
-
-    } else if (tab === 'siguiendo' && viewerId) {
+    if (feedTab === 'siguiendo') {
       const followCountRes = await pool.query(
         'SELECT COUNT(*)::int AS cnt FROM follows WHERE follower_id = $1',
         [viewerId]
       );
       no_follows = followCountRes.rows[0].cnt === 0;
+    }
 
+    // ── This page's cards, then every activity row behind them ────────────────
+    const cardRows = await pageCards({ tab: feedTab, viewerId, hidden, cursor });
+    const has_more = cardRows.length > PAGE_SIZE;
+    const cards = cardRows.slice(0, PAGE_SIZE);
+
+    let activityRows = [];
+    if (cards.length) {
       const res = await pool.query(
         `${FEED_SELECT}
-         AND a.user_id IN (SELECT followed_id FROM follows WHERE follower_id = $1)
-         AND a.user_id <> ALL($2::int[])
-         ORDER BY a.created_at DESC
-         LIMIT 60`,
-        [viewerId, hidden]
-      );
-      activityRows = res.rows;
-
-    } else {
-      const res = await pool.query(
-        `${FEED_SELECT}
-         AND a.user_id <> ALL($1::int[])
-         ORDER BY a.created_at DESC
-         LIMIT 60`,
-        [hidden]
+         AND (a.user_id, a.igdb_game_id) IN (SELECT * FROM unnest($1::int[], $2::int[]))
+         ${feedTab === 'popular' ? `AND a.created_at > NOW() - INTERVAL '7 days'` : ''}
+         ORDER BY a.created_at DESC, a.id DESC`,
+        [cards.map((c) => c.user_id), cards.map((c) => c.igdb_game_id)]
       );
       activityRows = res.rows;
     }
 
-    // ── Merge: same user + same game → one card ───────────────────────────────
+    // ── Merge: same user + same game → one card (rows come newest first) ─────
+    // Each field comes from the newest row of its type (a re-rating shows the current score).
     const mergeMap = new Map();
     for (const row of activityRows) {
       const key = `${row.user_id}:${row.igdb_game_id}`;
-      if (!mergeMap.has(key)) {
-        mergeMap.set(key, {
+      let m = mergeMap.get(key);
+      if (!m) {
+        m = {
           ...row,
-          types:       new Set([row.type]),
-          score:       row.type === 'rating' ? row.metadata?.score   : null,
-          content:     row.type === 'review' ? row.metadata?.content : null,
-          status:      row.type === 'backlog' ? row.metadata?.status : null,
-          review_id:      row.review_id ?? null,
-          likes_count:    row.likes_count,
-          comments_count: row.comments_count,
-        });
-      } else {
-        const m = mergeMap.get(key);
-        m.types.add(row.type);
-        if (parseDbDate(row.created_at) > parseDbDate(m.created_at)) m.created_at = row.created_at;
-        if (row.type === 'rating') m.score = row.metadata?.score;
-        if (row.type === 'review') {
-          m.content        = row.metadata?.content;
-          m.review_id      = row.review_id ?? null;
-          m.likes_count    = row.likes_count;
-          m.comments_count = row.comments_count;
-        }
-        if (row.type === 'backlog') m.status = row.metadata?.status;
+          types:          new Set(),
+          score:          null,
+          content:        null,
+          status:         null,
+          review_id:      null,
+          likes_count:    0,
+          comments_count: 0,
+        };
+        mergeMap.set(key, m);
+      }
+      if (m.types.has(row.type)) continue;
+      m.types.add(row.type);
+      if (row.type === 'rating')  m.score = row.metadata?.score ?? null;
+      if (row.type === 'backlog') m.status = row.metadata?.status ?? null;
+      if (row.type === 'review') {
+        m.content        = row.metadata?.content ?? null;
+        m.review_id      = row.review_id ?? null;
+        m.likes_count    = row.likes_count;
+        m.comments_count = row.comments_count;
       }
     }
 
-    const mergedRows = [...mergeMap.values()]
-      .sort(tab === 'popular'
-        ? (a, b) => b.likes_count - a.likes_count || parseDbDate(b.created_at) - parseDbDate(a.created_at)
-        : (a, b) => parseDbDate(b.created_at) - parseDbDate(a.created_at)
-      )
-      .slice(0, 20);
+    // Feed order = the page query's order.
+    const mergedRows = cards
+      .map((c) => mergeMap.get(`${c.user_id}:${c.igdb_game_id}`))
+      .filter(Boolean);
+
+    const last = cards[cards.length - 1];
+    const next_cursor = !has_more || !last
+      ? null
+      : feedTab === 'popular'
+        ? encodeCursor({ o: (cursor?.o ?? 0) + PAGE_SIZE })
+        : encodeCursor({ t: last.last_at_text, id: Number(last.last_id) });
+
+    // ── Which of these reviews the viewer already liked ───────────────────────
+    const reviewIds = mergedRows.map((r) => r.review_id).filter((id) => id != null);
+    let likedByViewer = new Set();
+    if (viewerId && reviewIds.length) {
+      const likedRes = await pool.query(
+        'SELECT review_id FROM review_likes WHERE user_id = $1 AND review_id = ANY($2::int[])',
+        [viewerId, reviewIds]
+      );
+      likedByViewer = new Set(likedRes.rows.map((r) => r.review_id));
+    }
 
     // ── Batch-fetch IGDB game data ────────────────────────────────────────────
     const gameIds = [...new Set(mergedRows.map((r) => r.igdb_game_id))];
@@ -174,6 +259,8 @@ export async function GET(request) {
         likes_count:    row.likes_count,
         comments_count: row.comments_count ?? 0,
         review_id:      row.review_id ?? null,
+        // Whether the signed-in viewer liked this review (always false without a token or a review).
+        viewer_liked:   row.review_id != null && likedByViewer.has(row.review_id),
         user: {
           username:   row.username,
           nombre:     row.nombre,
@@ -184,6 +271,10 @@ export async function GET(request) {
         game: gameMap[row.igdb_game_id] ?? { id: row.igdb_game_id, name: `Juego #${row.igdb_game_id}`, cover: null },
       };
     });
+
+    if (!firstPage) {
+      return Response.json({ items, trending: [], suggestions: [], no_follows, has_more, next_cursor });
+    }
 
     // ── Trending: top 5 most-rated games this week ────────────────────────────
     // Uses `ratings` (canonical, 1 row per user/game) so re-ratings don't inflate counts.
@@ -254,7 +345,7 @@ export async function GET(request) {
       review_count: u.review_count,
     }));
 
-    return Response.json({ items, trending, suggestions, no_follows });
+    return Response.json({ items, trending, suggestions, no_follows, has_more, next_cursor });
 
   } catch (err) {
     console.error('[feed] error:', err);

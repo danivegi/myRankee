@@ -4,7 +4,7 @@ export async function generateMetadata({ params }) {
   const { username } = await params;
   try {
     const result = await pool.query(
-      'SELECT nombre, apellido, bio FROM users WHERE username = $1',
+      'SELECT nombre, apellido, bio FROM users WHERE lower(username) = lower($1)',
       [username]
     );
     if (!result.rows.length) return { title: `@${username}` };

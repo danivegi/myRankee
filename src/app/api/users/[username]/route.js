@@ -28,7 +28,7 @@ export async function GET(request, { params }) {
          : 'false'
        } AS blocked_by_me
      FROM users u
-     WHERE u.username = $1`,
+     WHERE lower(u.username) = lower($1)`,
     hasViewer ? [username, viewerId] : [username]
   );
 

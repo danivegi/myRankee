@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
@@ -90,7 +90,7 @@ function IconFlag({ size = 13 }) {
 }
 
 function FeedCard({ item, token, currentUser }) {
-  const [liked,         setLiked]        = useState(false);
+  const [liked,         setLiked]        = useState(item.viewer_liked ?? false);
   const [likesCount,    setLikesCount]   = useState(item.likes_count ?? 0);
   const [liking,        setLiking]       = useState(false);
   const [heartAnim,     setHeartAnim]    = useState(false);
@@ -440,6 +440,11 @@ export default function FeedPage() {
   const [loading,     setLoading]     = useState(true);
   const [apiError,    setApiError]    = useState(null);
   const [noFollows,   setNoFollows]   = useState(false);
+  const [nextCursor,  setNextCursor]  = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError,   setMoreError]   = useState(null);
+  // The tab whose results are on screen: a "load more" answer for another tab is dropped.
+  const tabRef = useRef(activeTab);
 
   useEffect(() => {
     const t = localStorage.getItem('token');
@@ -456,6 +461,10 @@ export default function FeedPage() {
     setLoading(true);
     setApiError(null);
     setNoFollows(false);
+    setNextCursor(null);
+    setMoreError(null);
+    setLoadingMore(false);
+    tabRef.current = activeTab;
     const tab = TAB_PARAM[activeTab];
     fetch(`/api/feed?tab=${tab}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -472,10 +481,35 @@ export default function FeedPage() {
         setTrending(data.trending ?? []);
         setSuggestions(data.suggestions ?? []);
         setNoFollows(data.no_follows ?? false);
+        setNextCursor(data.has_more ? data.next_cursor ?? null : null);
       })
       .catch((err) => setApiError(err.message))
       .finally(() => setLoading(false));
   }, [activeTab, token]);
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    const tabAtStart = activeTab;
+    setLoadingMore(true);
+    setMoreError(null);
+    try {
+      const params = new URLSearchParams({ tab: TAB_PARAM[tabAtStart], cursor: nextCursor });
+      const r = await fetch(`/api/feed?${params}`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await r.json().catch(() => ({}));
+      if (tabRef.current !== tabAtStart) return;
+      if (!r.ok) { setMoreError(data?.error ?? `Error ${r.status}`); return; }
+      // Popular pages by offset: a card can move between pages as likes change, so skip repeats.
+      setItems((prev) => {
+        const seen = new Set(prev.map((i) => i.id));
+        return [...prev, ...(data.items ?? []).filter((i) => !seen.has(i.id))];
+      });
+      setNextCursor(data.has_more ? data.next_cursor ?? null : null);
+    } catch {
+      if (tabRef.current === tabAtStart) setMoreError('Error de conexión');
+    } finally {
+      if (tabRef.current === tabAtStart) setLoadingMore(false);
+    }
+  }
 
   // ── Empty state per tab ───────────────────────────────────────────────────
 
@@ -594,6 +628,21 @@ export default function FeedPage() {
                 }
                 return null;
               })}
+
+              {(nextCursor || moreError) && (
+                <div className="flex flex-col items-center gap-2 pt-2 pb-4">
+                  {moreError && <p className="text-red-400 text-xs text-center">{moreError}</p>}
+                  {nextCursor && (
+                    <button
+                      onClick={loadMore}
+                      disabled={loadingMore}
+                      className="px-5 py-2.5 rounded-full border border-[#3F3F46] text-white text-sm font-semibold hover:border-[#A855F7] hover:text-[#A855F7] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+                    >
+                      {loadingMore ? 'Cargando…' : 'Cargar más'}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </main>

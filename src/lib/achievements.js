@@ -121,11 +121,14 @@ export async function checkAndUnlockAchievements(userId) {
     const results = [];
     for (const ach of achRows.rows) {
       try {
-        await pool.query(
+        const inserted = await pool.query(
           `INSERT INTO user_achievements (user_id, achievement_id)
-           VALUES ($1, $2) ON CONFLICT (user_id, achievement_id) DO NOTHING`,
+           VALUES ($1, $2) ON CONFLICT (user_id, achievement_id) DO NOTHING
+           RETURNING id`,
           [userId, ach.id]
         );
+        // A concurrent action already unlocked it: no second notification or toast.
+        if (inserted.rowCount === 0) continue;
         try {
           await ensureNotificationsTable();
           await pool.query(

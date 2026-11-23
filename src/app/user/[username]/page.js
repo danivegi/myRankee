@@ -1970,7 +1970,7 @@ export default function UserProfilePage({ params }) {
           if (meRes.ok) {
             const { user: me } = await meRes.json();
             setViewerUsername(me.username);
-            if (me.username === username) {
+            if (me.username?.toLowerCase() === username?.toLowerCase()) {
               setIsOwner(true);
             }
           }

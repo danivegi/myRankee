@@ -9,7 +9,7 @@ export async function GET(request, { params }) {
   try {
     await ensureFollowsTable();
 
-    const targetRes = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    const targetRes = await pool.query('SELECT id FROM users WHERE lower(username) = lower($1)', [username]);
     if (!targetRes.rows.length) return Response.json([]);
 
     const userId = targetRes.rows[0].id;
