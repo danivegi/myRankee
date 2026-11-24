@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, use } from 'react';
+import FollowToggleButton from '@/app/components/FollowToggleButton';
 import { useRouter } from 'next/navigation';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
@@ -193,14 +194,22 @@ function AddGameModal({ listId, onClose, onAdded, onRemoved, initialAddedIds = [
 
 // ── Edit list modal ───────────────────────────────────────────────────────────
 
-function EditListModal({ list, onClose, onSaved }) {
+function EditListModal({ list, ownerFollows, onClose, onSaved }) {
   const [title, setTitle] = useState(list.title);
   const [description, setDescription] = useState(list.description || '');
+  const [isPublic, setIsPublic] = useState(list.is_public !== false);
+  const [confirmPrivate, setConfirmPrivate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Making a public list private removes every follower but you.
+  const goingPrivate = list.is_public !== false && !isPublic;
+  const losingFollowers = goingPrivate ? Math.max(0, (list.followers_count ?? 0) - (ownerFollows ? 1 : 0)) : 0;
+
   async function handleSave() {
     if (!title.trim()) { setError('El título es obligatorio'); return; }
+    // Warn first when people will stop following it.
+    if (losingFollowers > 0 && !confirmPrivate) { setConfirmPrivate(true); return; }
     setLoading(true);
     setError('');
     try {
@@ -208,16 +217,58 @@ function EditListModal({ list, onClose, onSaved }) {
       const res = await fetch(`/api/lists/${list.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: title.trim(), description: description.trim() }),
+        body: JSON.stringify({ title: title.trim(), description: description.trim(), is_public: isPublic }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || 'Error al guardar'); return; }
-      onSaved({ title: data.title, description: data.description });
+      if (!res.ok) { setError(data.error || 'Error al guardar'); setConfirmPrivate(false); return; }
+      onSaved({
+        title: data.title,
+        description: data.description,
+        is_public: data.is_public ?? isPublic,
+        followers_count: data.followers_count ?? list.followers_count,
+      });
     } catch {
       setError('Error al guardar los cambios');
+      setConfirmPrivate(false);
     } finally {
       setLoading(false);
     }
+  }
+
+  if (confirmPrivate) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-fade-in" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }} onClick={() => !loading && setConfirmPrivate(false)}>
+        <div className="modal-scale-in w-full max-w-sm rounded-2xl border border-[#1A1A1A] flex flex-col gap-5 p-6" style={{ backgroundColor: '#111111' }} onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-col gap-2">
+            <h3 className="text-white font-semibold">¿Hacer privada esta lista?</h3>
+            <p className="text-[#9CA3AF] text-sm leading-relaxed">
+              {losingFollowers === 1
+                ? '1 persona dejará de seguir esta lista.'
+                : `${losingFollowers} personas dejarán de seguir esta lista.`}{' '}
+              Solo tú podrás verla. Si vuelves a hacerla pública, no recuperará a sus seguidores.
+            </p>
+          </div>
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setConfirmPrivate(false)}
+              disabled={loading}
+              className="flex-1 py-2.5 rounded-full border border-[#1A1A1A] text-[#71717A] text-sm hover:text-white hover:border-[#71717A] transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className="flex-1 py-2.5 rounded-full text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50"
+              style={{ backgroundColor: '#EF4444', color: '#fff' }}
+            >
+              {loading ? 'Guardando...' : 'Hacer privada'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -249,6 +300,28 @@ function EditListModal({ list, onClose, onSaved }) {
               rows={3}
               className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-[#A855F7] transition-colors resize-none"
             />
+          </div>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-white text-sm">Lista pública</span>
+              <span className="text-[#71717A] text-xs leading-relaxed">
+                {isPublic
+                  ? 'Cualquiera puede verla y seguirla.'
+                  : losingFollowers > 0
+                    ? `Solo tú podrás verla. ${losingFollowers === 1 ? '1 persona dejará' : `${losingFollowers} personas dejarán`} de seguirla.`
+                    : 'Solo tú podrás verla.'}
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isPublic}
+              aria-label="Lista pública"
+              onClick={() => setIsPublic((v) => !v)}
+              className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors cursor-pointer ${isPublic ? 'bg-[#A855F7]' : 'bg-[#3F3F46]'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${isPublic ? 'translate-x-5' : ''}`} />
+            </button>
           </div>
         </div>
 
@@ -324,6 +397,8 @@ export default function ListDetailPage({ params }) {
   }, [id]);
 
   const isOwner = currentUser && list && currentUser.id === list.user_id;
+  // Someone else's private list only loads for admins (e.g. "Ver en contexto" from a report).
+  const adminView = !!list && list.is_public === false && !isOwner;
 
   async function handleFollow() {
     const token = localStorage.getItem('token');
@@ -339,7 +414,8 @@ export default function ListDetailPage({ params }) {
         setFollowing(data.following);
         setList((prev) => ({
           ...prev,
-          followers_count: prev.followers_count + (data.following ? 1 : -1),
+          // The server's recounted number when it sends it.
+          followers_count: data.followers_count ?? prev.followers_count + (data.following ? 1 : -1),
         }));
       }
     } catch {
@@ -401,8 +477,8 @@ export default function ListDetailPage({ params }) {
     }));
   }
 
-  function handleListSaved({ title, description }) {
-    setList((prev) => ({ ...prev, title, description }));
+  function handleListSaved({ title, description, is_public, followers_count }) {
+    setList((prev) => ({ ...prev, title, description, is_public, followers_count }));
     setEditListOpen(false);
   }
 
@@ -442,10 +518,24 @@ export default function ListDetailPage({ params }) {
           Volver a listas
         </Link>
 
+        {adminView && (
+          <div className="mb-6 px-4 py-3 rounded-xl border border-yellow-700/50 bg-yellow-900/10 text-yellow-300 text-sm">
+            Esta lista es privada. La ves porque eres administrador.
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6 mb-8">
           <div className="flex-1 min-w-0">
             <h1 className={`${anton.className} text-white text-[38px] leading-tight mb-2`}>{list.title}</h1>
+            {list.is_public === false && (
+              <span className="inline-flex items-center gap-1.5 mb-3 px-2.5 py-1 rounded-full border border-[#3F3F46] text-[#A1A1AA] text-xs">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                Privada
+              </span>
+            )}
             {list.description && (
               <p className="text-[#71717A] text-sm leading-relaxed mb-5">{list.description}</p>
             )}
@@ -479,32 +569,13 @@ export default function ListDetailPage({ params }) {
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2 md:flex-col md:flex-nowrap md:flex-shrink-0 md:mt-2">
-            {!isOwner && (
-              <button
+            {!isOwner && !adminView && (
+              <FollowToggleButton
+                following={following}
                 onClick={handleFollow}
                 disabled={followLoading}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50 ${
-                  following
-                    ? 'border border-[#A855F7] text-[#A855F7] hover:bg-[#A855F7]/10'
-                    : 'bg-[#A855F7] text-[#0A0A0A] hover:bg-[#9333EA]'
-                }`}
-              >
-                {following ? (
-                  <>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    Siguiendo
-                  </>
-                ) : (
-                  <>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Seguir lista
-                  </>
-                )}
-              </button>
+                followLabel="Seguir lista"
+              />
             )}
 
             <button
@@ -523,7 +594,7 @@ export default function ListDetailPage({ params }) {
               {shareListCopied ? '¡Copiado!' : 'Compartir'}
             </button>
 
-            {currentUser && !isOwner && (
+            {currentUser && !isOwner && !adminView && (
               <button
                 onClick={() => setReportOpen(true)}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#1A1A1A] text-[#71717A] text-sm hover:text-red-400 hover:border-red-900/60 transition-colors cursor-pointer"
@@ -668,6 +739,7 @@ export default function ListDetailPage({ params }) {
       {editListOpen && (
         <EditListModal
           list={list}
+          ownerFollows={following}
           onClose={() => setEditListOpen(false)}
           onSaved={handleListSaved}
         />

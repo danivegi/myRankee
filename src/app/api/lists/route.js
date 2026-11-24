@@ -20,16 +20,27 @@ export async function GET(request) {
   // Lists of users the viewer blocked are left out (optional token).
   const hidden = await blockedIdsFor((await optionalUser(request))?.id ?? null);
 
+  // Every order ends in l.id so offset pages are stable (no repeats or gaps between pages).
+  const withGames = ' AND EXISTS (SELECT 1 FROM list_games e WHERE e.list_id = l.id)';
   let extraWhere = '';
+  let extraColumns = '';
   let orderBy;
 
   if (tab === 'mas_seguidas') {
-    extraWhere = " AND l.created_at > NOW() - INTERVAL '7 days'";
-    orderBy = 'l.followers_count DESC, l.created_at DESC';
+    // Most followed public lists of all time, most recently updated first on ties; empty lists left out.
+    extraWhere = withGames;
+    orderBy = 'l.followers_count DESC, COALESCE(l.updated_at, l.created_at) DESC, l.id DESC';
   } else if (tab === 'recientes') {
-    orderBy = 'l.created_at DESC';
+    orderBy = 'l.created_at DESC, l.id DESC';
   } else {
-    orderBy = 'l.followers_count DESC, l.created_at DESC';
+    // "populares" = "En tendencia" (key kept for existing clients): follows gained in the last 7 days,
+    // then all-time followers, then most recently updated. Lists without recent follows still follow,
+    // so the tab is never empty. Empty lists are left out.
+    extraWhere = withGames;
+    extraColumns = `,
+            (SELECT COUNT(*)::int FROM list_followers rf
+              WHERE rf.list_id = l.id AND rf.created_at > NOW() - INTERVAL '7 days') AS recent_followers`;
+    orderBy = 'recent_followers DESC, l.followers_count DESC, COALESCE(l.updated_at, l.created_at) DESC, l.id DESC';
   }
 
   const result = await pool.query(
@@ -41,7 +52,7 @@ export async function GET(request) {
               WHERE lg2.list_id = l.id
               ORDER BY lg2.added_at ASC
               LIMIT 4
-            ) AS cover_game_ids
+            ) AS cover_game_ids${extraColumns}
      FROM lists l
      JOIN users u ON u.id = l.user_id
      LEFT JOIN list_games lg ON lg.list_id = l.id
@@ -50,11 +61,14 @@ export async function GET(request) {
      GROUP BY l.id, u.username, u.nombre, u.apellido, u.avatar_url
      ORDER BY ${orderBy}
      LIMIT $1 OFFSET $2`,
-    [limit, offset, hidden]
+    // One extra row tells whether there's a next page.
+    [limit + 1, offset, hidden]
   );
+  const hasMore = result.rows.length > limit;
+  const pageRows = result.rows.slice(0, limit);
 
   const lists = await Promise.all(
-    result.rows.map(async (list) => {
+    pageRows.map(async (list) => {
       const gameIds = list.cover_game_ids || [];
       let covers = [];
 
@@ -88,11 +102,13 @@ export async function GET(request) {
           avatar_url: list.avatar_url,
         },
         covers,
+        // En tendencia only: follows gained in the last 7 days.
+        ...(list.recent_followers != null ? { recent_followers: list.recent_followers } : {}),
       };
     })
   );
 
-  return Response.json({ lists, page, hasMore: result.rows.length === limit });
+  return Response.json({ lists, page, hasMore });
 }
 
 export async function POST(request) {

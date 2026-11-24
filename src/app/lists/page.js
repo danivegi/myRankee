@@ -13,7 +13,8 @@ const anton = Anton({ weight: '400', subsets: ['latin'], display: 'swap' });
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 const TABS = [
-  { key: 'populares',   label: 'Populares' },
+  // Key/slug stay "populares" (links and the mobile app use them); it ranks lists trending this week.
+  { key: 'populares',   label: 'En tendencia' },
   { key: 'recientes',   label: 'Recientes' },
   { key: 'mas_seguidas', label: 'Más Seguidas' },
   { key: 'mis_listas',  label: 'Mis Listas',  authOnly: true },
@@ -429,7 +430,7 @@ export default function ListsPage() {
                 onClick={() => handleTabChange('populares')}
                 className="px-5 py-2.5 rounded-full border border-[#A855F7] text-[#A855F7] text-sm font-medium hover:bg-[#A855F7]/10 transition-colors cursor-pointer min-h-[44px]"
               >
-                Explorar listas populares
+                Explorar listas en tendencia
               </button>
             )}
           </div>

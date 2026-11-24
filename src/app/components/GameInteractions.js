@@ -223,21 +223,31 @@ function AddToListModal({ gameId, onClose }) {
   const { addToast } = useToast();
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(null);
+  const [busy, setBusy] = useState(null);
+  // Ids of my lists that already include this game (checkmarks); tapping toggles add/remove.
   const [added, setAdded] = useState(new Set());
   const [error, setError] = useState('');
 
   useEffect(() => {
     async function load() {
       const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
       try {
-        const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+        const meRes = await fetch('/api/auth/me', { headers });
         if (!meRes.ok) { setLoading(false); return; }
         const { user } = await meRes.json();
-        const listsRes = await fetch(`/api/users/${user.username}/lists`);
+        // With the token the owner also gets their private lists.
+        const [listsRes, containsRes] = await Promise.all([
+          fetch(`/api/users/${encodeURIComponent(user.username)}/lists`, { headers }),
+          fetch(`/api/lists/contains?igdb_game_id=${encodeURIComponent(gameId)}`, { headers }),
+        ]);
         if (listsRes.ok) {
           const data = await listsRes.json();
           setLists(Array.isArray(data) ? data : []);
+        }
+        if (containsRes.ok) {
+          const data = await containsRes.json();
+          setAdded(new Set(Array.isArray(data?.list_ids) ? data.list_ids : []));
         }
       } catch {
         // fail silently
@@ -246,27 +256,42 @@ function AddToListModal({ gameId, onClose }) {
       }
     }
     load();
-  }, []);
+  }, [gameId]);
 
-  async function handleAdd(listId) {
+  async function handleToggle(list) {
     const token = localStorage.getItem('token');
-    setAdding(listId);
+    const isAdded = added.has(list.id);
+    setBusy(list.id);
     setError('');
     try {
-      const res = await fetch(`/api/lists/${listId}/games`, {
-        method: 'POST',
+      const res = await fetch(`/api/lists/${list.id}/games`, {
+        method: isAdded ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ igdb_game_id: gameId }),
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || 'Error al añadir'); addToast(data.error || 'Error al añadir el juego', 'error'); return; }
-      setAdded((prev) => new Set(prev).add(listId));
-      addToast('¡Juego añadido a tu lista!');
+      const data = await res.json().catch(() => ({}));
+      // 409: it was already there (e.g. added from another tab) — show it as added.
+      if (!res.ok && !(res.status === 409 && !isAdded)) {
+        const message = data.error || (isAdded ? 'Error al quitar el juego' : 'Error al añadir el juego');
+        setError(message);
+        addToast(message, 'error');
+        return;
+      }
+      setAdded((prev) => {
+        const next = new Set(prev);
+        if (isAdded) next.delete(list.id); else next.add(list.id);
+        return next;
+      });
+      setLists((prev) => prev.map((l) => (
+        l.id === list.id && res.ok ? { ...l, games_count: Math.max(0, (l.games_count ?? 0) + (isAdded ? -1 : 1)) } : l
+      )));
+      addToast(isAdded ? `Quitado de «${list.title}»` : `Añadido a «${list.title}»`);
     } catch {
-      setError('Error al añadir el juego');
-      addToast('Error al añadir el juego', 'error');
+      const message = isAdded ? 'Error al quitar el juego' : 'Error al añadir el juego';
+      setError(message);
+      addToast(message, 'error');
     } finally {
-      setAdding(null);
+      setBusy(null);
     }
   }
 
@@ -297,21 +322,26 @@ function AddToListModal({ gameId, onClose }) {
           <div className="flex flex-col gap-2 max-h-72 overflow-y-auto">
             {lists.map((list) => {
               const isAdded = added.has(list.id);
-              const isAdding = adding === list.id;
+              const isAdding = busy === list.id;
               return (
                 <button
                   key={list.id}
-                  onClick={() => !isAdded && handleAdd(list.id)}
-                  disabled={isAdded || isAdding}
+                  onClick={() => handleToggle(list)}
+                  disabled={busy != null}
+                  aria-pressed={isAdded}
+                  title={isAdded ? 'Quitar de esta lista' : 'Añadir a esta lista'}
                   className={`flex items-center justify-between px-4 py-3 rounded-lg border text-left text-sm transition-colors cursor-pointer disabled:cursor-default ${
                     isAdded
-                      ? 'border-[#A855F7] bg-[#A855F7]/10 text-[#A855F7]'
+                      ? 'border-[#A855F7] bg-[#A855F7]/10 text-[#A855F7] hover:bg-[#A855F7]/20'
                       : 'border-[#1A1A1A] text-white hover:bg-[#1A1A1A]'
                   }`}
                 >
                   <div className="flex flex-col gap-0.5">
                     <span className="font-medium">{list.title}</span>
-                    <span className="text-[#71717A] text-xs">{list.games_count} juegos</span>
+                    <span className="text-[#71717A] text-xs">
+                      {list.games_count} {list.games_count === 1 ? 'juego' : 'juegos'}
+                      {list.is_public === false && ' · Privada'}
+                    </span>
                   </div>
                   {isAdding ? (
                     <div className="w-4 h-4 rounded-full border-2 border-[#A855F7] border-t-transparent animate-spin" />

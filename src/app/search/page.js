@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import FollowToggleButton from '@/app/components/FollowToggleButton';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -567,26 +568,7 @@ function UserCard({ user, token }) {
       </Link>
 
       {token && (
-        <button
-          onClick={toggleFollow}
-          disabled={loading}
-          className={[
-            'group w-full py-2 rounded-full text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50 min-h-[36px] flex items-center justify-center gap-1.5',
-            following
-              ? 'border border-[#3F3F46] text-white hover:border-red-500 hover:text-red-400'
-              : 'bg-[#A855F7] text-[#0A0A0A] hover:bg-[#9333EA]',
-          ].join(' ')}
-        >
-          {following ? (
-            <>
-              <svg className="hidden group-hover:block flex-shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-              <span className="group-hover:hidden">Siguiendo</span>
-              <span className="hidden group-hover:inline">Dejar de seguir</span>
-            </>
-          ) : 'Seguir'}
-        </button>
+        <FollowToggleButton following={following} onClick={toggleFollow} disabled={loading} size="block" />
       )}
     </div>
   );

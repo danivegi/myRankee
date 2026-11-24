@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo, use } from 'react';
+import FollowToggleButton from '@/app/components/FollowToggleButton';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Anton, Inter } from 'next/font/google';
 import Image from 'next/image';
@@ -1677,26 +1678,7 @@ function UserRow({ user, token, viewerUsername }) {
         {user.bio && <p className="text-[#71717A] text-xs line-clamp-1 mt-0.5">{user.bio}</p>}
       </div>
       {!isOwnRow && token && (
-        <button
-          onClick={toggleFollow}
-          disabled={loading}
-          className={[
-            'group flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 min-h-[32px] flex items-center gap-1',
-            following
-              ? 'border border-[#3F3F46] text-white hover:border-red-500 hover:text-red-400'
-              : 'bg-[#A855F7] text-[#0A0A0A] hover:bg-[#9333EA]',
-          ].join(' ')}
-        >
-          {following ? (
-            <>
-              <svg className="hidden group-hover:block flex-shrink-0" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-              <span className="group-hover:hidden">Siguiendo</span>
-              <span className="hidden group-hover:inline">Dejar de seguir</span>
-            </>
-          ) : 'Seguir'}
-        </button>
+        <FollowToggleButton following={following} onClick={toggleFollow} disabled={loading} size="sm" />
       )}
     </div>
   );
@@ -2295,26 +2277,7 @@ export default function UserProfilePage({ params }) {
                 {blockLoading ? '...' : 'Desbloquear'}
               </button>
             ) : (
-            <button
-              onClick={handleFollow}
-              disabled={followLoading}
-              className={[
-                'group px-6 py-2.5 rounded-full text-sm font-semibold transition-colors flex-shrink-0 cursor-pointer disabled:opacity-60 flex items-center gap-1.5',
-                isFollowing
-                  ? 'border border-[#3F3F46] text-white hover:border-red-500 hover:text-red-400'
-                  : 'bg-[#A855F7] text-[#0A0A0A] hover:bg-[#9333EA]',
-              ].join(' ')}
-            >
-              {followLoading ? '...' : isFollowing ? (
-                <>
-                  <svg className="hidden group-hover:block flex-shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                  <span className="group-hover:hidden">Siguiendo</span>
-                  <span className="hidden group-hover:inline">Dejar de seguir</span>
-                </>
-              ) : 'Seguir'}
-            </button>
+            <FollowToggleButton following={isFollowing} onClick={handleFollow} disabled={followLoading} />
             )}
             {viewerUsername && (
               <>

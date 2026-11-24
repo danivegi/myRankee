@@ -66,6 +66,12 @@ export async function DELETE(request) {
     // Lists (games + followers first)
     await client.query('DELETE FROM list_games     WHERE list_id IN (SELECT id FROM lists WHERE user_id = $1)', [uid]);
     await client.query('DELETE FROM list_followers WHERE list_id IN (SELECT id FROM lists WHERE user_id = $1)', [uid]);
+    // The lists this user followed lose a follower each (followers_count would drift otherwise).
+    await client.query(
+      `UPDATE lists SET followers_count = GREATEST(0, followers_count - 1)
+       WHERE id IN (SELECT list_id FROM list_followers WHERE user_id = $1)`,
+      [uid]
+    );
     await client.query('DELETE FROM list_followers WHERE user_id = $1', [uid]);
     await client.query('DELETE FROM lists WHERE user_id = $1', [uid]);
 

@@ -30,6 +30,8 @@ export async function POST(request, { params }) {
       'INSERT INTO list_games (list_id, igdb_game_id) VALUES ($1, $2)',
       [id, igdb_game_id]
     );
+    // Changing the games counts as updating the list ("Más seguidas" tie-break).
+    await pool.query('UPDATE lists SET updated_at = NOW() WHERE id = $1', [id]);
   } catch (e) {
     if (e.code === '23505') {
       return Response.json({ error: 'El juego ya está en la lista' }, { status: 409 });
@@ -52,10 +54,11 @@ export async function DELETE(request, { params }) {
   const { igdb_game_id } = await request.json();
   if (!igdb_game_id) return Response.json({ error: 'Falta igdb_game_id' }, { status: 400 });
 
-  await pool.query(
+  const removed = await pool.query(
     'DELETE FROM list_games WHERE list_id = $1 AND igdb_game_id = $2',
     [id, igdb_game_id]
   );
+  if (removed.rowCount > 0) await pool.query('UPDATE lists SET updated_at = NOW() WHERE id = $1', [id]);
 
   return Response.json({ success: true });
 }
